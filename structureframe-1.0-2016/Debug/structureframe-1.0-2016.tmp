@@ -1,0 +1,91 @@
+<ASSEMBLER_INFO>
+ <VERSION>2.1.57</VERSION>
+ <DEVICE>"ATmega64A"</DEVICE>
+ <WORKING_DIR>C:\Data\Ёлектроника\Atmel Studio projects\structureframe-1.0-2016\structureframe-1.0-2016\Debug</WORKING_DIR>
+ <INCLUDE_PATH>
+  <DIR>C:/Program Files (x86)\Atmel\Studio\7.0\Packs\atmel\ATmega_DFP\1.0.90\avrasm\inc</DIR>
+  <DIR>C:/Program Files (x86)\Atmel\Studio\7.0\Packs\atmel\ATmega_DFP\1.0.90\avrasm\inc</DIR>
+  <DIR>C:\Program Files (x86)\Atmel\Studio\7.0\toolchain\avr8\avrassembler\Include</DIR>
+  <DIR></DIR>
+ </INCLUDE_PATH>
+ <SOURCE_FILE>C:\Data\Ёлектроника\Atmel Studio projects\structureframe-1.0-2016\structureframe-1.0-2016\main.asm</SOURCE_FILE>
+ <INCLUDED_FILES>
+  <FILE>C:/Program Files (x86)\Atmel\Studio\7.0\Packs\atmel\ATmega_DFP\1.0.90\avrasm\inc\m64adef.inc</FILE>
+ </INCLUDED_FILES>
+ <OBJECT_FILES>
+  <FILE>C:\Data\Ёлектроника\Atmel Studio projects\structureframe-1.0-2016\structureframe-1.0-2016\Debug\structureframe-1.0-2016.obj</FILE>
+ </OBJECT_FILES>
+ <HEX_FILES>
+  <FILE>structureframe-1.0-2016.hex</FILE>
+ </HEX_FILES>
+ <OUTPUT_FILES>
+  <FILE>structureframe-1.0-2016.map</FILE>
+  <FILE>structureframe-1.0-2016.lss</FILE>
+ </OUTPUT_FILES>
+ <LABELS>
+  <uartRX><FILE>C:\Data\Ёлектроника\Atmel Studio projects\structureframe-1.0-2016\structureframe-1.0-2016\main.asm</FILE><LINE>92</LINE></uartRX>
+  <uartErrorsCounter><FILE>C:\Data\Ёлектроника\Atmel Studio projects\structureframe-1.0-2016\structureframe-1.0-2016\main.asm</FILE><LINE>93</LINE></uartErrorsCounter>
+  <uartTX><FILE>C:\Data\Ёлектроника\Atmel Studio projects\structureframe-1.0-2016\structureframe-1.0-2016\main.asm</FILE><LINE>94</LINE></uartTX>
+  <uartTXRead><FILE>C:\Data\Ёлектроника\Atmel Studio projects\structureframe-1.0-2016\structureframe-1.0-2016\main.asm</FILE><LINE>95</LINE></uartTXRead>
+  <uartTXWrite><FILE>C:\Data\Ёлектроника\Atmel Studio projects\structureframe-1.0-2016\structureframe-1.0-2016\main.asm</FILE><LINE>96</LINE></uartTXWrite>
+  <Reset><FILE>C:\Data\Ёлектроника\Atmel Studio projects\structureframe-1.0-2016\structureframe-1.0-2016\main.asm</FILE><LINE>356</LINE></Reset>
+  <Timer0Over><FILE>C:\Data\Ёлектроника\Atmel Studio projects\structureframe-1.0-2016\structureframe-1.0-2016\main.asm</FILE><LINE>183</LINE></Timer0Over>
+  <U1_RXcomplete><FILE>C:\Data\Ёлектроника\Atmel Studio projects\structureframe-1.0-2016\structureframe-1.0-2016\main.asm</FILE><LINE>295</LINE></U1_RXcomplete>
+  <U1_DREmpty><FILE>C:\Data\Ёлектроника\Atmel Studio projects\structureframe-1.0-2016\structureframe-1.0-2016\main.asm</FILE><LINE>241</LINE></U1_DREmpty>
+  <notAFastPreset><FILE>C:\Data\Ёлектроника\Atmel Studio projects\structureframe-1.0-2016\structureframe-1.0-2016\main.asm</FILE><LINE>206</LINE></notAFastPreset>
+  <notALongPreset><FILE>C:\Data\Ёлектроника\Atmel Studio projects\structureframe-1.0-2016\structureframe-1.0-2016\main.asm</FILE><LINE>227</LINE></notALongPreset>
+  <unreadData><FILE>C:\Data\Ёлектроника\Atmel Studio projects\structureframe-1.0-2016\structureframe-1.0-2016\main.asm</FILE><LINE>263</LINE></unreadData>
+  <exitTXIntTrue><FILE>C:\Data\Ёлектроника\Atmel Studio projects\structureframe-1.0-2016\structureframe-1.0-2016\main.asm</FILE><LINE>284</LINE></exitTXIntTrue>
+  <exitTXInt><FILE>C:\Data\Ёлектроника\Atmel Studio projects\structureframe-1.0-2016\structureframe-1.0-2016\main.asm</FILE><LINE>280</LINE></exitTXInt>
+  <errorFF><FILE>C:\Data\Ёлектроника\Atmel Studio projects\structureframe-1.0-2016\structureframe-1.0-2016\main.asm</FILE><LINE>321</LINE></errorFF>
+  <exitInt2><FILE>C:\Data\Ёлектроника\Atmel Studio projects\structureframe-1.0-2016\structureframe-1.0-2016\main.asm</FILE><LINE>333</LINE></exitInt2>
+  <decAddrTable><FILE>C:\Data\Ёлектроника\Atmel Studio projects\structureframe-1.0-2016\structureframe-1.0-2016\main.asm</FILE><LINE>349</LINE></decAddrTable>
+  <disp0><FILE>C:\Data\Ёлектроника\Atmel Studio projects\structureframe-1.0-2016\structureframe-1.0-2016\main.asm</FILE><LINE>747</LINE></disp0>
+  <disp1><FILE>C:\Data\Ёлектроника\Atmel Studio projects\structureframe-1.0-2016\structureframe-1.0-2016\main.asm</FILE><LINE>752</LINE></disp1>
+  <disp2><FILE>C:\Data\Ёлектроника\Atmel Studio projects\structureframe-1.0-2016\structureframe-1.0-2016\main.asm</FILE><LINE>757</LINE></disp2>
+  <disp3><FILE>C:\Data\Ёлектроника\Atmel Studio projects\structureframe-1.0-2016\structureframe-1.0-2016\main.asm</FILE><LINE>762</LINE></disp3>
+  <disp4><FILE>C:\Data\Ёлектроника\Atmel Studio projects\structureframe-1.0-2016\structureframe-1.0-2016\main.asm</FILE><LINE>767</LINE></disp4>
+  <disp5><FILE>C:\Data\Ёлектроника\Atmel Studio projects\structureframe-1.0-2016\structureframe-1.0-2016\main.asm</FILE><LINE>772</LINE></disp5>
+  <disp6><FILE>C:\Data\Ёлектроника\Atmel Studio projects\structureframe-1.0-2016\structureframe-1.0-2016\main.asm</FILE><LINE>777</LINE></disp6>
+  <disp7><FILE>C:\Data\Ёлектроника\Atmel Studio projects\structureframe-1.0-2016\structureframe-1.0-2016\main.asm</FILE><LINE>782</LINE></disp7>
+  <disp8><FILE>C:\Data\Ёлектроника\Atmel Studio projects\structureframe-1.0-2016\structureframe-1.0-2016\main.asm</FILE><LINE>787</LINE></disp8>
+  <disp9><FILE>C:\Data\Ёлектроника\Atmel Studio projects\structureframe-1.0-2016\structureframe-1.0-2016\main.asm</FILE><LINE>792</LINE></disp9>
+  <dispA><FILE>C:\Data\Ёлектроника\Atmel Studio projects\structureframe-1.0-2016\structureframe-1.0-2016\main.asm</FILE><LINE>797</LINE></dispA>
+  <dispB><FILE>C:\Data\Ёлектроника\Atmel Studio projects\structureframe-1.0-2016\structureframe-1.0-2016\main.asm</FILE><LINE>802</LINE></dispB>
+  <dispC><FILE>C:\Data\Ёлектроника\Atmel Studio projects\structureframe-1.0-2016\structureframe-1.0-2016\main.asm</FILE><LINE>807</LINE></dispC>
+  <dispD><FILE>C:\Data\Ёлектроника\Atmel Studio projects\structureframe-1.0-2016\structureframe-1.0-2016\main.asm</FILE><LINE>812</LINE></dispD>
+  <dispE><FILE>C:\Data\Ёлектроника\Atmel Studio projects\structureframe-1.0-2016\structureframe-1.0-2016\main.asm</FILE><LINE>817</LINE></dispE>
+  <dispF><FILE>C:\Data\Ёлектроника\Atmel Studio projects\structureframe-1.0-2016\structureframe-1.0-2016\main.asm</FILE><LINE>822</LINE></dispF>
+  <dispR><FILE>C:\Data\Ёлектроника\Atmel Studio projects\structureframe-1.0-2016\structureframe-1.0-2016\main.asm</FILE><LINE>829</LINE></dispR>
+  <dispDash><FILE>C:\Data\Ёлектроника\Atmel Studio projects\structureframe-1.0-2016\structureframe-1.0-2016\main.asm</FILE><LINE>836</LINE></dispDash>
+  <uartDataSequence><FILE>C:\Data\Ёлектроника\Atmel Studio projects\structureframe-1.0-2016\structureframe-1.0-2016\main.asm</FILE><LINE>353</LINE></uartDataSequence>
+  <Flush><FILE>C:\Data\Ёлектроника\Atmel Studio projects\structureframe-1.0-2016\structureframe-1.0-2016\main.asm</FILE><LINE>362</LINE></Flush>
+  <Start><FILE>C:\Data\Ёлектроника\Atmel Studio projects\structureframe-1.0-2016\structureframe-1.0-2016\main.asm</FILE><LINE>445</LINE></Start>
+  <noNewData><FILE>C:\Data\Ёлектроника\Atmel Studio projects\structureframe-1.0-2016\structureframe-1.0-2016\main.asm</FILE><LINE>474</LINE></noNewData>
+  <compareYAndRXStorageStart><FILE>C:\Data\Ёлектроника\Atmel Studio projects\structureframe-1.0-2016\structureframe-1.0-2016\main.asm</FILE><LINE>633</LINE></compareYAndRXStorageStart>
+  <notATimeToRefresh><FILE>C:\Data\Ёлектроника\Atmel Studio projects\structureframe-1.0-2016\structureframe-1.0-2016\main.asm</FILE><LINE>565</LINE></notATimeToRefresh>
+  <HH1><FILE>C:\Data\Ёлектроника\Atmel Studio projects\structureframe-1.0-2016\structureframe-1.0-2016\main.asm</FILE><LINE>521</LINE></HH1>
+  <HH2><FILE>C:\Data\Ёлектроника\Atmel Studio projects\structureframe-1.0-2016\structureframe-1.0-2016\main.asm</FILE><LINE>527</LINE></HH2>
+  <HH3><FILE>C:\Data\Ёлектроника\Atmel Studio projects\structureframe-1.0-2016\structureframe-1.0-2016\main.asm</FILE><LINE>533</LINE></HH3>
+  <HH4><FILE>C:\Data\Ёлектроника\Atmel Studio projects\structureframe-1.0-2016\structureframe-1.0-2016\main.asm</FILE><LINE>539</LINE></HH4>
+  <LL1><FILE>C:\Data\Ёлектроника\Atmel Studio projects\structureframe-1.0-2016\structureframe-1.0-2016\main.asm</FILE><LINE>545</LINE></LL1>
+  <LL2><FILE>C:\Data\Ёлектроника\Atmel Studio projects\structureframe-1.0-2016\structureframe-1.0-2016\main.asm</FILE><LINE>551</LINE></LL2>
+  <LL3><FILE>C:\Data\Ёлектроника\Atmel Studio projects\structureframe-1.0-2016\structureframe-1.0-2016\main.asm</FILE><LINE>557</LINE></LL3>
+  <LL4><FILE>C:\Data\Ёлектроника\Atmel Studio projects\structureframe-1.0-2016\structureframe-1.0-2016\main.asm</FILE><LINE>563</LINE></LL4>
+  <nothingToSend><FILE>C:\Data\Ёлектроника\Atmel Studio projects\structureframe-1.0-2016\structureframe-1.0-2016\main.asm</FILE><LINE>600</LINE></nothingToSend>
+  <storeR10ToTXBuffer><FILE>C:\Data\Ёлектроника\Atmel Studio projects\structureframe-1.0-2016\structureframe-1.0-2016\main.asm</FILE><LINE>648</LINE></storeR10ToTXBuffer>
+  <usartTXSkipLabel1><FILE>C:\Data\Ёлектроника\Atmel Studio projects\structureframe-1.0-2016\structureframe-1.0-2016\main.asm</FILE><LINE>597</LINE></usartTXSkipLabel1>
+  <firstDigTeleport><FILE>C:\Data\Ёлектроника\Atmel Studio projects\structureframe-1.0-2016\structureframe-1.0-2016\main.asm</FILE><LINE>618</LINE></firstDigTeleport>
+  <secondDigTeleport><FILE>C:\Data\Ёлектроника\Atmel Studio projects\structureframe-1.0-2016\structureframe-1.0-2016\main.asm</FILE><LINE>621</LINE></secondDigTeleport>
+  <thirdDigTeleport><FILE>C:\Data\Ёлектроника\Atmel Studio projects\structureframe-1.0-2016\structureframe-1.0-2016\main.asm</FILE><LINE>624</LINE></thirdDigTeleport>
+  <fourthDigTeleport><FILE>C:\Data\Ёлектроника\Atmel Studio projects\structureframe-1.0-2016\structureframe-1.0-2016\main.asm</FILE><LINE>627</LINE></fourthDigTeleport>
+  <firstDig><FILE>C:\Data\Ёлектроника\Atmel Studio projects\structureframe-1.0-2016\structureframe-1.0-2016\main.asm</FILE><LINE>718</LINE></firstDig>
+  <secondDig><FILE>C:\Data\Ёлектроника\Atmel Studio projects\structureframe-1.0-2016\structureframe-1.0-2016\main.asm</FILE><LINE>725</LINE></secondDig>
+  <thirdDig><FILE>C:\Data\Ёлектроника\Atmel Studio projects\structureframe-1.0-2016\structureframe-1.0-2016\main.asm</FILE><LINE>732</LINE></thirdDig>
+  <fourthDig><FILE>C:\Data\Ёлектроника\Atmel Studio projects\structureframe-1.0-2016\structureframe-1.0-2016\main.asm</FILE><LINE>739</LINE></fourthDig>
+  <jumpNotEnd><FILE>C:\Data\Ёлектроника\Atmel Studio projects\structureframe-1.0-2016\structureframe-1.0-2016\main.asm</FILE><LINE>641</LINE></jumpNotEnd>
+  <TXWriterSkip><FILE>C:\Data\Ёлектроника\Atmel Studio projects\structureframe-1.0-2016\structureframe-1.0-2016\main.asm</FILE><LINE>674</LINE></TXWriterSkip>
+  <noTXOverflow><FILE>C:\Data\Ёлектроника\Atmel Studio projects\structureframe-1.0-2016\structureframe-1.0-2016\main.asm</FILE><LINE>681</LINE></noTXOverflow>
+  <Decode><FILE>C:\Data\Ёлектроника\Atmel Studio projects\structureframe-1.0-2016\structureframe-1.0-2016\main.asm</FILE><LINE>691</LINE></Decode>
+ </LABELS>
+</ASSEMBLER_INFO>
