@@ -1,8 +1,8 @@
 
-AVRASM ver. 2.1.57  C:\Data\Ёлектроника\Atmel Studio projects\structureframe-1.0-2016\structureframe-1.0-2016\main.asm Mon Mar 14 19:19:58 2016
+AVRASM ver. 2.2.0  C:\Data\Ёлектроника\Atmel Studio projects\structureframe-1.0-2016\structureframe-1.0-2016\main.asm Sun Mar 20 20:00:53 2016
 
-[builtin](2): Including file 'C:/Program Files (x86)\Atmel\Studio\7.0\Packs\atmel\ATmega_DFP\1.0.90\avrasm\inc\m64adef.inc'
-C:\Data\Ёлектроника\Atmel Studio projects\structureframe-1.0-2016\structureframe-1.0-2016\main.asm(2): Including file 'C:/Program Files (x86)\Atmel\Studio\7.0\Packs\atmel\ATmega_DFP\1.0.90\avrasm\inc\m64adef.inc'
+[builtin](2): Including file 'C:/Program Files (x86)\Atmel\Studio\7.0\Packs\atmel\ATmega_DFP\1.0.98\avrasm\inc\m64adef.inc'
+C:\Data\Ёлектроника\Atmel Studio projects\structureframe-1.0-2016\structureframe-1.0-2016\main.asm(2): Including file 'C:/Program Files (x86)\Atmel\Studio\7.0\Packs\atmel\ATmega_DFP\1.0.98\avrasm\inc\m64adef.inc'
                  
                  
                  
@@ -1271,6 +1271,8 @@ C:\Data\Ёлектроника\Atmel Studio projects\structureframe-1.0-2016\structureframe
                  
                  ; ***** END OF FILE ******************************************************
                  
+                 .device atmega64a
+                 
                  //constants definition
                  .equ segind0 = 0xC0	//7-segment LED indicator's digits definitions
                  .equ segind1 = 0xF9	//		 0
@@ -1470,7 +1472,7 @@ C:\Data\Ёлектроника\Atmel Studio projects\structureframe-1.0-2016\structureframe
 000050 6034      	ORI flagStorage, (1<<timeToRefresh)	//Set timeToRefresh flag
 000051 e080      	LDI overflowsCounterLow, 0x00	//zeroing the overflows counter
 000052 e090      	LDI overflowsCounterHigh, 0x00
-000053 9513      	INC R17							//Circling from 0 to 3 periodically (fast), for determine which digit should be lit
+000053 9513      	INC R17							//Circling from 0 to 3 periodically (fast), to determine which digit should be lit
 000054 3014      	CPI R17, 4						//compare with 4
 000055 f409      	BRNE notAFastPreset				//if not 4, then exit, else reset R17 to 0
 000056 e010      	LDI R17, 0						//reset to 0
@@ -1595,7 +1597,7 @@ C:\Data\Ёлектроника\Atmel Studio projects\structureframe-1.0-2016\structureframe
 0000ab 8308      ST Y, R16						//And store back
                  
 0000ac 9100 009c UIN R16, UDR1	//Read received data
-0000ae 3020      CPI R18, 0x00		//If there are read errors...
+0000ae 3020      CPI R18, 0x00	//If there are read errors...
 0000af f009      BREQ errorFF
 0000b0 ef0f      	LDI R16, 0xFF	//Then write 0xFF instead of data
                  errorFF:
@@ -1605,7 +1607,7 @@ C:\Data\Ёлектроника\Atmel Studio projects\structureframe-1.0-2016\structureframe
 0000b3 e0d1      LDI YH, high(uartRX)
 0000b4 9627      ADIW YH:YL, (uartRAMStorageRXLength-1)	//add (storage_size - 1) to Y
 0000b5 17ca      CP YL, XL
-0000b6 07db      CPC YH, XH			//If X pointer reached last allocated cell in 8-byte storage...
+0000b6 07db      CPC YH, XH			//If X pointer reached last allocated cell in the storage...
 0000b7 f414      BRGE exitInt2		//...then reset it to the beginning
 0000b8 e0a0      	LDI XL, low(uartRX)	//load X pointer with address of SRAM storage
 0000b9 e0b1      	LDI XH, high(uartRX)
@@ -1617,7 +1619,7 @@ C:\Data\Ёлектроника\Atmel Studio projects\structureframe-1.0-2016\structureframe
 0000bb 910f
 0000bc bf0f
 0000bd 910f         POPSREG		//Extract SREG and R16 from stack
-0000be 91cf        POP YL			//Extracting saved values from stack
+0000be 91cf        POP YL		//Extracting saved values from stack
 0000bf 91df       POP YH
 0000c0 912f      POP R18
                  
@@ -1733,7 +1735,7 @@ C:\Data\Ёлектроника\Atmel Studio projects\structureframe-1.0-2016\structureframe
                  //now we have the overflow interrupt enabled for timer0
                  
                  //------------------------------------
-000103 e0a0      LDI XL, low(uartRX)	//load X pointer with address of SRAM storage...
+000103 e0a0      LDI XL, low(uartRX)		//load X pointer with address of SRAM storage...
 000104 e0b1      LDI XH, high(uartRX)	//...used for store last 8 bytes from USART1
                  
 000105 94e8      CLT						//clear T flag which means "incorrect number to display"
@@ -1775,143 +1777,145 @@ C:\Data\Ёлектроника\Atmel Studio projects\structureframe-1.0-2016\structureframe
                  
                  noNewData:
                  
-000119 ff32      SBRS flagStorage, timeToRefresh			//7-segment digits output routine
-00011a c038      RJMP notATimeToRefresh					//If the flag isn't set then skip
                  
-00011b 7f3b      ANDI flagStorage, ~(1<<timeToRefresh)	//CBR wont work or I am stupid -_- clear the flag
+000119 ff31      SBRS flagStorage, transmit
+00011a c018      RJMP nothingToSend				//If the flag isn't set then skip
                  
-00011c e0c0      LDI YL, low(uartRX)
-00011d 2d0d      MOV R16, R13
-00011e 0fc0      ADD YL, R16
-00011f e000      LDI R16, 0x00
-000120 e0d1      LDI YH, high(uartRX)
-000121 1fd0      ADC YH, R16
-000122 8108      LD R16, Y
-000123 2fc0      MOV R28, R16
-000124 2fd0      MOV R29, R16
-000125 70cf      ANDI R28, 0b_0000_1111		//Mask high and low digits
-000126 7fd0      ANDI R29, 0b_1111_0000
-000127 95d6      LSR R29
-000128 95d6      LSR R29
-000129 95d6      LSR R29
-00012a 95d6      LSR R29						//Shift high masked digit right 4 times
-00012b 2f5d      MOV digitToDisp1, R29
-00012c 2f6c      MOV digitToDisp2, R28		//Display both high and low digit separately on the LED
+00011b fd33      SBRC flagStorage, uartTXBufferOverflow
+00011c c016      RJMP nothingToSend				//If the flag is set then skip
                  
-00012d 01ed      MOVW YH:YL, XH:XL
+00011d 2d0b      	MOV R16, R11
+00011e eae8      	LDI ZL, Low(uartDataSequence*2)
+00011f e0f1      	LDI ZH, High(uartDataSequence*2)
                  
-00012e d04f      RCALL compareYAndRXStorageStart
+000120 0fe0      	ADD ZL, R16
+000121 2700      	CLR R16
+000122 1ff0      	ADC ZH, R16
                  
-00012f 910a      LD R16, -Y					//Read last stored byte
-000130 2fc0      MOV R28, R16
-000131 2fd0      MOV R29, R16
-000132 70cf      ANDI R28, 0b_0000_1111		//Mask high and low digits
-000133 7fd0      ANDI R29, 0b_1111_0000
-000134 95d6      LSR R29
-000135 95d6      LSR R29
-000136 95d6      LSR R29
-000137 95d6      LSR R29						//Shift high masked digit right 4 times
-000138 2f7d      MOV digitToDisp3, R29
-000139 2f4c      MOV digitToDisp4, R28		//Display both high and low digit separately on the LED
+000123 9104      	LPM R16, Z	//Load (from Program Memory) a content of the cell the Z points to
+000124 2ea0      	MOV R10, R16
+000125 d05f      	RCALL storeR10ToTXBuffer
                  
-00013a 94e8      CLT			//if everything will be correct (see below) then clear the T flag (which means "incorrect number")
+000126 9100 009a 	UIN R16, UCSR1B
+000128 6200      	ORI R16, (1<<UDRIE1)	//Permit interrupt
+000129 9300 009a 	UOUT UCSR1B, R16
                  
-00013b 3150      CPI digitToDisp1, 0x10		//if the 1st register...
-00013c f008      BRLO HH1			//...is more than F...
-00013d 9468      SET				//...then set the T flag (which means "incorrect number")
+00012b 2d0b      	MOV R16, R11
+00012c 9503      	INC R16
+00012d e0ee      	LDI ZL, 14 //we have 15 bytes long sequency
+00012e 17e0      	CP ZL, R16
+00012f f414      	BRGE usartTXSkipLabel1
+000130 2700      		CLR R16
+000131 7f3d      		ANDI flagStorage, ~(1<<transmit)
                  
-                 HH1:
-                 
-00013e 3160      	CPI digitToDisp2, 0x10		//if the 2nd one...
-00013f f008      	BRLO HH2			//...is more than F...
-000140 9468      	SET				//...then set the T flag (which means "incorrect number")
-                 
-                 HH2:
-                 
-000141 3170      		CPI digitToDisp3, 0x10		//if the 3rd one...
-000142 f008      		BRLO HH3			//...is more than F...
-000143 9468      		SET				//...then set the T flag (which means "incorrect number")
-                 
-                 HH3:
-                 
-000144 3140      			CPI digitToDisp4, 0x10		//if the 4th one...
-000145 f008      			BRLO HH4			//...is more than F...
-000146 9468      			SET				//...then set the T flag (which means "incorrect number")
-                 
-                 HH4:
-                 
-000147 3050      CPI digitToDisp1, 0x00		//same for less than 0
-000148 f40a      BRPL LL1			//BRanch if PLus (if the N flag in SREG is cleared)
-000149 9468      SET
-                 
-                 LL1:
-                 
-00014a 3060      	CPI digitToDisp2, 0x00
-00014b f40a      	BRPL LL2			//BRanch if PLus (if the N flag in SREG is cleared)
-00014c 9468      	SET
-                 
-                 LL2:
-                 
-00014d 3070      		CPI digitToDisp3, 0x00
-00014e f40a      		BRPL LL3			//BRanch if PLus (if the N flag in SREG is cleared)
-00014f 9468      		SET
-                 
-                 LL3:
-                 
-000150 3040      			CPI digitToDisp4, 0x00
-000151 f40a      			BRPL LL4			//BRanch if PLus (if the N flag in SREG is cleared)
-000152 9468      			SET
-                 
-                 LL4:
-                 
-                 notATimeToRefresh:
-                 
-000153 ff31      SBRS flagStorage, transmit
-000154 c018      RJMP nothingToSend				//If the flag isn't set then skip
-                 
-000155 fd33      SBRC flagStorage, uartTXBufferOverflow
-000156 c016      RJMP nothingToSend				//If the flag is set then skip
-                 
-000157 2d0b      MOV R16, R11
-000158 eae8      LDI ZL, Low(uartDataSequence*2)
-000159 e0f1      LDI ZH, High(uartDataSequence*2)
-                 
-00015a 0fe0      ADD ZL, R16
-00015b 2700      CLR R16
-00015c 1ff0      ADC ZH, R16
-                 
-00015d 9104      LPM R16, Z	//Load (from Program Memory) a content of the cell the Z points to
-00015e 2ea0      MOV R10, R16
-00015f d025      RCALL storeR10ToTXBuffer
-                 
-000160 9100 009a UIN R16, UCSR1B
-000162 6200      ORI R16, (1<<UDRIE1)	//Permit interrupt
-000163 9300 009a UOUT UCSR1B, R16
-                 
-000165 2d0b      MOV R16, R11
-000166 9503      INC R16
-000167 e0ee      LDI ZL, 14 //we have 15 bytes long sequency
-000168 17e0      CP ZL, R16
-000169 f414      BRGE usartTXSkipLabel1
-00016a 2700      	CLR R16
-00016b 7f3d      	ANDI flagStorage, ~(1<<transmit)
-                 
-                 usartTXSkipLabel1:
-00016c 2eb0      MOV R11, R16
+                 	usartTXSkipLabel1:
+000132 2eb0      	MOV R11, R16
                  
                  nothingToSend:
                  
-00016d 3010      CPI R17, 0			//Is it time to display 1st digit of LED?
-00016e f039      BREQ firstDigTeleport
                  
-00016f 3011      CPI R17, 1			//Is it time to display 2nd digit of LED?
-000170 f039      BREQ secondDigTeleport
+000133 ff32      SBRS flagStorage, timeToRefresh			//7-segment digits output routine
+000134 c040      RJMP notATimeToRefresh					//If the flag isn't set then skip
                  
-000171 3012      CPI R17, 2			//Is it time to display 3rd digit of LED?
-000172 f039      BREQ thirdDigTeleport
+000135 7f3b      	ANDI flagStorage, ~(1<<timeToRefresh)	//CBR wont work or I am stupid -_- clear the flag
                  
-000173 3013      CPI R17, 3			//Is it time to display 3rd digit of LED?
-000174 f039      BREQ fourthDigTeleport
+000136 e0c0      	LDI YL, low(uartRX)
+000137 2d0d      	MOV R16, R13
+000138 0fc0      	ADD YL, R16
+000139 e000      	LDI R16, 0x00
+00013a e0d1      	LDI YH, high(uartRX)
+00013b 1fd0      	ADC YH, R16
+00013c 8108      	LD R16, Y
+00013d 2fc0      	MOV R28, R16
+00013e 2fd0      	MOV R29, R16
+00013f 70cf      	ANDI R28, 0b_0000_1111		//Mask high and low digits
+000140 7fd0      	ANDI R29, 0b_1111_0000
+000141 95d6      	LSR R29
+000142 95d6      	LSR R29
+000143 95d6      	LSR R29
+000144 95d6      	LSR R29						//Shift high masked digit right 4 times
+000145 2f5d      	MOV digitToDisp1, R29
+000146 2f6c      	MOV digitToDisp2, R28		//Display both high and low digit separately on the LED
+                 
+000147 01ed      	MOVW YH:YL, XH:XL
+                 
+000148 d035      	RCALL compareYAndRXStorageStart
+                 
+000149 910a      	LD R16, -Y					//Read last stored byte
+00014a 2fc0      	MOV R28, R16
+00014b 2fd0      	MOV R29, R16
+00014c 70cf      	ANDI R28, 0b_0000_1111		//Mask high and low digits
+00014d 7fd0      	ANDI R29, 0b_1111_0000
+00014e 95d6      	LSR R29
+00014f 95d6      	LSR R29
+000150 95d6      	LSR R29
+000151 95d6      	LSR R29						//Shift high masked digit right 4 times
+000152 2f7d      	MOV digitToDisp3, R29
+000153 2f4c      	MOV digitToDisp4, R28		//Display both high and low digit separately on the LED
+                 
+000154 94e8      	CLT			//if everything will be correct (see below) then clear the T flag (which means "incorrect number")
+                 
+000155 3150      	CPI digitToDisp1, 0x10		//if the 1st register...
+000156 f008      	BRLO HH1			//...is more than F...
+000157 9468      	SET				//...then set the T flag (which means "incorrect number")
+                 
+                 	HH1:
+                 
+000158 3160      		CPI digitToDisp2, 0x10		//if the 2nd one...
+000159 f008      		BRLO HH2			//...is more than F...
+00015a 9468      		SET				//...then set the T flag (which means "incorrect number")
+                 
+                 	HH2:
+                 
+00015b 3170      			CPI digitToDisp3, 0x10		//if the 3rd one...
+00015c f008      			BRLO HH3			//...is more than F...
+00015d 9468      			SET				//...then set the T flag (which means "incorrect number")
+                 
+                 	HH3:
+                 
+00015e 3140      				CPI digitToDisp4, 0x10		//if the 4th one...
+00015f f008      				BRLO HH4			//...is more than F...
+000160 9468      				SET				//...then set the T flag (which means "incorrect number")
+                 
+                 	HH4:
+                 
+000161 3050      	CPI digitToDisp1, 0x00		//same for less than 0
+000162 f40a      	BRPL LL1			//BRanch if PLus (if the N flag in SREG is cleared)
+000163 9468      	SET
+                 
+                 	LL1:
+                 
+000164 3060      		CPI digitToDisp2, 0x00
+000165 f40a      		BRPL LL2			//BRanch if PLus (if the N flag in SREG is cleared)
+000166 9468      		SET
+                 
+                 	LL2:
+                 
+000167 3070      			CPI digitToDisp3, 0x00
+000168 f40a      			BRPL LL3			//BRanch if PLus (if the N flag in SREG is cleared)
+000169 9468      			SET
+                 
+                 	LL3:
+                 
+00016a 3040      				CPI digitToDisp4, 0x00
+00016b f40a      				BRPL LL4			//BRanch if PLus (if the N flag in SREG is cleared)
+00016c 9468      				SET
+                 
+                 	LL4:
+                 
+00016d 3010      	CPI R17, 0			//Is it time to display 1st digit of LED?
+00016e f039      	BREQ firstDigTeleport
+                 	
+00016f 3011      	CPI R17, 1			//Is it time to display 2nd digit of LED?
+000170 f039      	BREQ secondDigTeleport
+                 
+000171 3012      	CPI R17, 2			//Is it time to display 3rd digit of LED?
+000172 f039      	BREQ thirdDigTeleport
+                 
+000173 3013      	CPI R17, 3			//Is it time to display 3rd digit of LED?
+000174 f039      	BREQ fourthDigTeleport
+                 
+                 notATimeToRefresh:
                  
 000175 cf92      RJMP Start		//Go to start
                  //End of Main Routine//
@@ -2156,11 +2160,11 @@ counted separately from r26..r31 here.
 .dseg memory usage only counts static data declared with .byte
 
 "ATmega64A" register use summary:
-r0 :   0 r1 :   0 r2 :   0 r3 :   0 r4 :   0 r5 :   0 r6 :   0 r7 :   0 
-r8 :   0 r9 :   0 r10:   2 r11:   3 r12:   0 r13:   3 r14:   2 r15:   2 
-r16: 154 r17:   7 r18:  25 r19:  13 r20:   4 r21:   4 r22:   4 r23:   4 
-r24:   3 r25:   3 r26:   5 r27:   5 r28:  39 r29:  43 r30:  12 r31:  10 
-x  :   1 y  :   9 z  :   5 
+x  :   1 y  :   9 z  :   5 r0 :   0 r1 :   0 r2 :   0 r3 :   0 r4 :   0 
+r5 :   0 r6 :   0 r7 :   0 r8 :   0 r9 :   0 r10:   2 r11:   3 r12:   0 
+r13:   3 r14:   2 r15:   2 r16: 154 r17:   7 r18:  25 r19:  13 r20:   4 
+r21:   4 r22:   4 r23:   4 r24:   3 r25:   3 r26:   5 r27:   5 r28:  39 
+r29:  43 r30:  12 r31:  10 
 Registers used: 24 out of 35 (68.6%)
 
 "ATmega64A" instruction use summary:

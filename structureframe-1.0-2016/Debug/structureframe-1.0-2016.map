@@ -1,5 +1,5 @@
 
-AVRASM ver. 2.1.57  C:\Data\Ёлектроника\Atmel Studio projects\structureframe-1.0-2016\structureframe-1.0-2016\main.asm Mon Mar 14 19:19:58 2016
+AVRASM ver. 2.2.0  C:\Data\Ёлектроника\Atmel Studio projects\structureframe-1.0-2016\structureframe-1.0-2016\main.asm Sun Mar 20 20:00:53 2016
 
 
 EQU  SIGNATURE_000 0000001e
@@ -952,18 +952,18 @@ CSEG Flush        000000df
 CSEG Start        00000108
 CSEG noNewData    00000119
 CSEG compareYAndRXStorageStart 0000017e
-CSEG notATimeToRefresh 00000153
-CSEG HH1          0000013e
-CSEG HH2          00000141
-CSEG HH3          00000144
-CSEG HH4          00000147
-CSEG LL1          0000014a
-CSEG LL2          0000014d
-CSEG LL3          00000150
-CSEG LL4          00000153
-CSEG nothingToSend 0000016d
+CSEG nothingToSend 00000133
 CSEG storeR10ToTXBuffer 00000185
-CSEG usartTXSkipLabel1 0000016c
+CSEG usartTXSkipLabel1 00000132
+CSEG notATimeToRefresh 00000175
+CSEG HH1          00000158
+CSEG HH2          0000015b
+CSEG HH3          0000015e
+CSEG HH4          00000161
+CSEG LL1          00000164
+CSEG LL2          00000167
+CSEG LL3          0000016a
+CSEG LL4          0000016d
 CSEG firstDigTeleport 00000176
 CSEG secondDigTeleport 00000178
 CSEG thirdDigTeleport 0000017a

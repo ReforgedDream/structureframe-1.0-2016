@@ -1,6 +1,8 @@
 
 .include "m64adef.inc"
 
+.device atmega64a
+
 //constants definition
 .equ segind0 = 0xC0	//7-segment LED indicator's digits definitions
 .equ segind1 = 0xF9	//		 0
@@ -198,7 +200,7 @@ BRLO notAFastPreset						//else - exit
 	ORI flagStorage, (1<<timeToRefresh)	//Set timeToRefresh flag
 	LDI overflowsCounterLow, 0x00	//zeroing the overflows counter
 	LDI overflowsCounterHigh, 0x00
-	INC R17							//Circling from 0 to 3 periodically (fast), for determine which digit should be lit
+	INC R17							//Circling from 0 to 3 periodically (fast), to determine which digit should be lit
 	CPI R17, 4						//compare with 4
 	BRNE notAFastPreset				//if not 4, then exit, else reset R17 to 0
 	LDI R17, 0						//reset to 0
@@ -315,7 +317,7 @@ ADD R16, R18					//Apply new errors to it...
 ST Y, R16						//And store back
 
 UIN R16, UDR1	//Read received data
-CPI R18, 0x00		//If there are read errors...
+CPI R18, 0x00	//If there are read errors...
 BREQ errorFF
 	LDI R16, 0xFF	//Then write 0xFF instead of data
 errorFF:
@@ -325,7 +327,7 @@ LDI YL, low(uartRX)	//Load Y pair with start address of the SRAM storage
 LDI YH, high(uartRX)
 ADIW YH:YL, (uartRAMStorageRXLength-1)	//add (storage_size - 1) to Y
 CP YL, XL
-CPC YH, XH			//If X pointer reached last allocated cell in 8-byte storage...
+CPC YH, XH			//If X pointer reached last allocated cell in the storage...
 BRGE exitInt2		//...then reset it to the beginning
 	LDI XL, low(uartRX)	//load X pointer with address of SRAM storage
 	LDI XH, high(uartRX)
@@ -335,7 +337,7 @@ exitInt2:
 ORI flagStorage, (1<<achtung)	//Achtung! Some new data received!
 
    POPSREG		//Extract SREG and R16 from stack
-  POP YL			//Extracting saved values from stack
+  POP YL		//Extracting saved values from stack
  POP YH
 POP R18
 
@@ -431,7 +433,7 @@ OUT TIMSK, R16			//set TOIE0 in TIMSK register
 //now we have the overflow interrupt enabled for timer0
 
 //------------------------------------
-LDI XL, low(uartRX)	//load X pointer with address of SRAM storage...
+LDI XL, low(uartRX)		//load X pointer with address of SRAM storage...
 LDI XH, high(uartRX)	//...used for store last 8 bytes from USART1
 
 CLT						//clear T flag which means "incorrect number to display"
@@ -473,96 +475,6 @@ RJMP noNewData				//bypass
 
 noNewData:
 
-SBRS flagStorage, timeToRefresh			//7-segment digits output routine
-RJMP notATimeToRefresh					//If the flag isn't set then skip
-
-ANDI flagStorage, ~(1<<timeToRefresh)	//CBR wont work or I am stupid -_- clear the flag
-
-LDI YL, low(uartRX)
-MOV R16, R13
-ADD YL, R16
-LDI R16, 0x00
-LDI YH, high(uartRX)
-ADC YH, R16
-LD R16, Y
-MOV R28, R16
-MOV R29, R16
-ANDI R28, 0b_0000_1111		//Mask high and low digits
-ANDI R29, 0b_1111_0000
-LSR R29
-LSR R29
-LSR R29
-LSR R29						//Shift high masked digit right 4 times
-MOV digitToDisp1, R29
-MOV digitToDisp2, R28		//Display both high and low digit separately on the LED
-
-MOVW YH:YL, XH:XL
-
-RCALL compareYAndRXStorageStart
-
-LD R16, -Y					//Read last stored byte
-MOV R28, R16
-MOV R29, R16
-ANDI R28, 0b_0000_1111		//Mask high and low digits
-ANDI R29, 0b_1111_0000
-LSR R29
-LSR R29
-LSR R29
-LSR R29						//Shift high masked digit right 4 times
-MOV digitToDisp3, R29
-MOV digitToDisp4, R28		//Display both high and low digit separately on the LED
-
-CLT			//if everything will be correct (see below) then clear the T flag (which means "incorrect number")
-
-CPI digitToDisp1, 0x10		//if the 1st register...
-BRLO HH1			//...is more than F...
-SET				//...then set the T flag (which means "incorrect number")
-
-HH1:
-
-	CPI digitToDisp2, 0x10		//if the 2nd one...
-	BRLO HH2			//...is more than F...
-	SET				//...then set the T flag (which means "incorrect number")
-
-HH2:
-
-		CPI digitToDisp3, 0x10		//if the 3rd one...
-		BRLO HH3			//...is more than F...
-		SET				//...then set the T flag (which means "incorrect number")
-
-HH3:
-
-			CPI digitToDisp4, 0x10		//if the 4th one...
-			BRLO HH4			//...is more than F...
-			SET				//...then set the T flag (which means "incorrect number")
-
-HH4:
-
-CPI digitToDisp1, 0x00		//same for less than 0
-BRPL LL1			//BRanch if PLus (if the N flag in SREG is cleared)
-SET
-
-LL1:
-
-	CPI digitToDisp2, 0x00
-	BRPL LL2			//BRanch if PLus (if the N flag in SREG is cleared)
-	SET
-
-LL2:
-
-		CPI digitToDisp3, 0x00
-		BRPL LL3			//BRanch if PLus (if the N flag in SREG is cleared)
-		SET
-
-LL3:
-
-			CPI digitToDisp4, 0x00
-			BRPL LL4			//BRanch if PLus (if the N flag in SREG is cleared)
-			SET
-
-LL4:
-
-notATimeToRefresh:
 
 SBRS flagStorage, transmit
 RJMP nothingToSend				//If the flag isn't set then skip
@@ -570,46 +482,138 @@ RJMP nothingToSend				//If the flag isn't set then skip
 SBRC flagStorage, uartTXBufferOverflow
 RJMP nothingToSend				//If the flag is set then skip
 
-MOV R16, R11
-LDI ZL, Low(uartDataSequence*2)
-LDI ZH, High(uartDataSequence*2)
+	MOV R16, R11
+	LDI ZL, Low(uartDataSequence*2)
+	LDI ZH, High(uartDataSequence*2)
 
-ADD ZL, R16
-CLR R16
-ADC ZH, R16
-
-LPM R16, Z	//Load (from Program Memory) a content of the cell the Z points to
-MOV R10, R16
-RCALL storeR10ToTXBuffer
-
-UIN R16, UCSR1B
-ORI R16, (1<<UDRIE1)	//Permit interrupt
-UOUT UCSR1B, R16
-
-MOV R16, R11
-INC R16
-LDI ZL, 14 //we have 15 bytes long sequency
-CP ZL, R16
-BRGE usartTXSkipLabel1
+	ADD ZL, R16
 	CLR R16
-	ANDI flagStorage, ~(1<<transmit)
+	ADC ZH, R16
 
-usartTXSkipLabel1:
-MOV R11, R16
+	LPM R16, Z	//Load (from Program Memory) a content of the cell the Z points to
+	MOV R10, R16
+	RCALL storeR10ToTXBuffer
+
+	UIN R16, UCSR1B
+	ORI R16, (1<<UDRIE1)	//Permit interrupt
+	UOUT UCSR1B, R16
+
+	MOV R16, R11
+	INC R16
+	LDI ZL, 14 //we have 15 bytes long sequency
+	CP ZL, R16
+	BRGE usartTXSkipLabel1
+		CLR R16
+		ANDI flagStorage, ~(1<<transmit)
+
+	usartTXSkipLabel1:
+	MOV R11, R16
 
 nothingToSend:
 
-CPI R17, 0			//Is it time to display 1st digit of LED?
-BREQ firstDigTeleport
 
-CPI R17, 1			//Is it time to display 2nd digit of LED?
-BREQ secondDigTeleport
+SBRS flagStorage, timeToRefresh			//7-segment digits output routine
+RJMP notATimeToRefresh					//If the flag isn't set then skip
 
-CPI R17, 2			//Is it time to display 3rd digit of LED?
-BREQ thirdDigTeleport
+	ANDI flagStorage, ~(1<<timeToRefresh)	//CBR wont work or I am stupid -_- clear the flag
 
-CPI R17, 3			//Is it time to display 3rd digit of LED?
-BREQ fourthDigTeleport
+	LDI YL, low(uartRX)
+	MOV R16, R13
+	ADD YL, R16
+	LDI R16, 0x00
+	LDI YH, high(uartRX)
+	ADC YH, R16
+	LD R16, Y
+	MOV R28, R16
+	MOV R29, R16
+	ANDI R28, 0b_0000_1111		//Mask high and low digits
+	ANDI R29, 0b_1111_0000
+	LSR R29
+	LSR R29
+	LSR R29
+	LSR R29						//Shift high masked digit right 4 times
+	MOV digitToDisp1, R29
+	MOV digitToDisp2, R28		//Display both high and low digit separately on the LED
+
+	MOVW YH:YL, XH:XL
+
+	RCALL compareYAndRXStorageStart
+
+	LD R16, -Y					//Read last stored byte
+	MOV R28, R16
+	MOV R29, R16
+	ANDI R28, 0b_0000_1111		//Mask high and low digits
+	ANDI R29, 0b_1111_0000
+	LSR R29
+	LSR R29
+	LSR R29
+	LSR R29						//Shift high masked digit right 4 times
+	MOV digitToDisp3, R29
+	MOV digitToDisp4, R28		//Display both high and low digit separately on the LED
+
+	CLT			//if everything will be correct (see below) then clear the T flag (which means "incorrect number")
+
+	CPI digitToDisp1, 0x10		//if the 1st register...
+	BRLO HH1			//...is more than F...
+	SET				//...then set the T flag (which means "incorrect number")
+
+	HH1:
+
+		CPI digitToDisp2, 0x10		//if the 2nd one...
+		BRLO HH2			//...is more than F...
+		SET				//...then set the T flag (which means "incorrect number")
+
+	HH2:
+
+			CPI digitToDisp3, 0x10		//if the 3rd one...
+			BRLO HH3			//...is more than F...
+			SET				//...then set the T flag (which means "incorrect number")
+
+	HH3:
+
+				CPI digitToDisp4, 0x10		//if the 4th one...
+				BRLO HH4			//...is more than F...
+				SET				//...then set the T flag (which means "incorrect number")
+
+	HH4:
+
+	CPI digitToDisp1, 0x00		//same for less than 0
+	BRPL LL1			//BRanch if PLus (if the N flag in SREG is cleared)
+	SET
+
+	LL1:
+
+		CPI digitToDisp2, 0x00
+		BRPL LL2			//BRanch if PLus (if the N flag in SREG is cleared)
+		SET
+
+	LL2:
+
+			CPI digitToDisp3, 0x00
+			BRPL LL3			//BRanch if PLus (if the N flag in SREG is cleared)
+			SET
+
+	LL3:
+
+				CPI digitToDisp4, 0x00
+				BRPL LL4			//BRanch if PLus (if the N flag in SREG is cleared)
+				SET
+
+	LL4:
+
+	CPI R17, 0			//Is it time to display 1st digit of LED?
+	BREQ firstDigTeleport
+	
+	CPI R17, 1			//Is it time to display 2nd digit of LED?
+	BREQ secondDigTeleport
+
+	CPI R17, 2			//Is it time to display 3rd digit of LED?
+	BREQ thirdDigTeleport
+
+	CPI R17, 3			//Is it time to display 3rd digit of LED?
+	BREQ fourthDigTeleport
+
+notATimeToRefresh:
 
 RJMP Start		//Go to start
 //End of Main Routine//
