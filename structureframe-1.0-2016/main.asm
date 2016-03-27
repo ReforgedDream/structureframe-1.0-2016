@@ -28,8 +28,8 @@
 .equ presetHigh = 0x01	//on 16 MHz and with no prescaler, there is approx. 62500 (0xF424) overflows per second (for 8-bit timer)
 //150 Hz (0x01A1) works well for the LED indicator
 //200 Hz (0x0139) for the green 4-digit indicator
-.equ owfPerSecond8BitLow = 0x24
-.equ owfPerSecond8BitHigh = 0xF4 //supra
+.equ owfPerSecond8BitLow = 0x12
+.equ owfPerSecond8BitHigh = 0x7A //supra
 
 //symbolic custom registers names
 .def digitToDisp1 = R21			//1st digit to be displayed on the LED. Only hexadecimal digits are defined!
@@ -44,10 +44,11 @@
 .equ transmit =						1		//USART1 transmission should be started
 .equ timeToRefresh =				2		//LED digits should be refreshed
 .equ uartTXBufferOverflow =			3
-.equ allDataSent =					4
-.equ dummy3 =			5		
-.equ dummy4 =			6
-.equ dummy5 =			7
+.equ spiNewDataReceived =			4
+.equ flag1 =						5
+.equ spiMOSIBufferOverflow =		6		
+.equ spiMISOBufferOverflow =		7
+
 
 .equ control1 = 0x61			//"a"
 .equ control2 = 0x77			//"w"
@@ -55,6 +56,9 @@
 
 .equ uartRAMStorageRXLength = 8	//well, a length of storage in RAM, dedicated for saving UART's received bytes
 .equ uartRAMStorageTXLength = 8	//same for bytes to transmit
+
+.equ spiRAMStorageMISOLength = 8	//a length of storage in RAM, dedicated for saving SPI's received bytes
+.equ spiRAMStorageMOSILength = 8	//same for bytes to transmit through SPI
 
 ;--------------------------------------------------------------------------------------------
 ;Macro definitions
@@ -91,11 +95,20 @@ POP R16			//Extract R16 value from stack
 .DSEG			//SRAM memory segment
 .ORG SRAM_START //start from the beginning
 
-uartRX: .BYTE uartRAMStorageRXLength	//allocate space for read buffer...
-uartErrorsCounter: .BYTE 1				//...and for errors counter
-uartTX: .BYTE uartRAMStorageTXLength	//allocate space for write buffer
-uartTXRead: .BYTE 1
-uartTXWrite: .BYTE 1
+uartRX:				.BYTE uartRAMStorageRXLength	//allocate space for read buffer...
+uartErrorsCounter:	.BYTE 1				//...and for errors counter
+uartTX:				.BYTE uartRAMStorageTXLength	//allocate space for write buffer
+uartTXRead:			.BYTE 1
+uartTXWrite:		.BYTE 1
+
+spiMISO:			.BYTE spiRAMStorageMISOLength	//allocate space for SPI MISO...
+spiMISORead:		.BYTE 1
+spiMISOWrite:		.BYTE 1		//read and write pointers
+
+spiMOSI:			.BYTE spiRAMStorageMOSILength	//...and MOSI buffers
+spiMOSIRead:		.BYTE 1
+spiMOSIWrite:		.BYTE 1		//read and write pointers
+//spiFlags:			.BYTE 1			//flags storage
 ;--------------------------------------------------------------------------------------------
 .CSEG
 //Reset and Interrupt Vectors table
@@ -138,7 +151,8 @@ uartTXWrite: .BYTE 1
 	RJMP Timer0Over
 
 	.ORG SPIaddr	;(SPI,STC) Serial Transfer Complete
-	RETI
+	RJMP SPIcomplete
+
 	.ORG URXC0addr	;(USART0,RXC) USART0, Rx Complete
 	RETI
 	.ORG UDRE0addr	;(USART0,UDRE) USART0 Data Register Empty
@@ -222,7 +236,7 @@ BRLO notALongPreset				//else - exit
 	LDI YL, 0x00	//zeroing the overflows counter
 	LDI YH, 0x00
 	INC R16
-	CPI R16, uartRAMStorageRXLength		//compare with length of the RX storage
+	CPI R16, spiRAMStorageMISOLength		//compare with length of the RX storage
 	BRNE notALongPreset				//if not equal, then exit, else reset R17 to 0
 	LDI R16, 0						//reset to 0
 
@@ -344,6 +358,94 @@ POP R18
 RETI
 
 ;-------------------
+
+SPIcomplete:	//SPI serial transfer complete interrupt
+
+PUSH R18
+ PUSH YL
+  PUSH YH
+   PUSHSREG
+
+UIN R16, SPDR
+
+LDI YL, low(spiMISO)
+LDI YH, high(spiMISO)
+LDS R18, spiMISOWrite
+ADD YL, R18
+CLR R18
+ADC YH, R18
+
+ST Y, R16
+
+LDS R18, spiMISOWrite
+INC R18
+CPI	R18, spiRAMStorageMISOLength	//If write pointer reached the end of MISO buffer...
+BRLO MISOWriterSkip
+	CLR	R18						//...then reset it
+
+MISOWriterSkip:
+
+LDS R16, spiMISORead
+CP R16, R18
+BRNE noMISOOverflow		//If not equal, then there's no overflow
+
+	//MISO buffer overflow
+	ORI flagStorage, (1<<spiMISOBufferOverflow)	//Set MISO Overflow flag
+
+noMISOOverflow:
+
+STS spiMISOWrite, R18
+
+ORI flagStorage, (1<<spiNewDataReceived)
+
+//------reception completed, data stored in buffer, flag is set------\\
+
+LDS R16, spiMOSIRead
+LDS R18, spiMOSIWrite
+
+SBRC flagStorage, spiMOSIBufferOverflow
+RJMP unreadDataSPI
+
+CP R16, R18
+BRNE unreadDataSPI
+
+	//Buffer is empty
+//	ORI flagStorage, (1<<spiAllDataSent) //we just shifted out all pending data
+	ANDI flagStorage, ~(1<<flag1)		//clear flag
+	RJMP exitMOSIIntTrue
+
+unreadDataSPI:
+
+LDS R16, spiMOSIRead		//excessive instruction
+LDI YL, low(spiMOSI)
+LDI YH, high(spiMOSI)
+ADD YL, R16
+CLR R18
+ADC YH, R18
+
+LD R18, Y
+UOUT SPDR, R18
+
+ANDI flagStorage, ~(1<<spiMOSIBufferOverflow)	//Clear MOSI Overflow flag
+INC R16
+CPI R16, spiRAMStorageMOSILength
+BRLO exitMOSIInt
+CLR R16
+
+exitMOSIInt:
+
+STS spiMOSIRead, R16
+
+exitMOSIIntTrue:
+
+   POPSREG
+  POP YH
+ POP YL
+POP R18
+
+RETI
+
+;-------------------
 //End of Interrupts Handler//
 
 ;--------------------------------------------------------------------------------------------
@@ -352,8 +454,9 @@ decAddrTable: .dw disp0, disp1, disp2, disp3, disp4, \
 		disp5, disp6, disp7, disp8, disp9, \
 		dispA, dispB, dispC, dispD, dispE, dispF, \
 		dispR, dispDash	//Adresses of the labels, stored in a certain place (decAddrTable) in program memory
-uartDataSequence: .db 0x48, 0x65, 0x6C, 0x6C, 0x6F, 0x2C, \
-					0x20, 0x77, 0x6F, 0x72, 0x6C, 0x64, 0x21, 0x0D, 0x0A, 0x00	//"Hello, world!" + CR + LF + 0x00(ASCII)
+spiDataSequence: .db 0x20, 0x0A, 0xFF, 0x50, 0x53, 0x08, 0xFF, 0xFF
+//0xFF, 0x50, 0x53, 0x08, 0x00, 0x00, 0x00, 0x00
+//NOP, select bank1, read register 8, spam zero 4 times to shift data out
 ;--------------------------------------------------------------------------------------------
 Reset:
 
@@ -388,10 +491,12 @@ OUT SPH, R16
 
 //USART1 Initialization
 ; Set baud rate
+; 2400 baud -> 0x01A0
 ; 9600 baud -> 0x0067
 ; 1Mbaud -> 0x0000
 LDI R16, 0x00
 UOUT UBRR1H, R16
+LDI R16, 0x00
 UOUT UBRR1L, R16
 
 ; 7 - (RXC1) USART Receive Complete					(r/o)
@@ -432,6 +537,42 @@ OUT TCCR0, R16			//now using system clock for Timer0 without prescaler
 OUT TIMSK, R16			//set TOIE0 in TIMSK register
 //now we have the overflow interrupt enabled for timer0
 
+//SPI Initialization
+//SPCR - SPI Control Register
+//7 – (SPIE): SPI Interrupt Enable
+//6 – (SPE): SPI Enable
+//5 – (DORD): Data Order
+//4 – (MSTR): Master/Slave Select
+//3 – (CPOL): Clock Polarity
+//2 – (CPHA): Clock Phase
+//1 - (SPR1): SPI Clock Rate Select 1
+//0 - (SPR0): SPI Clock Rate Select 0
+//Int. enable, SPI enable, MSBit first, Master Mode, ...
+//...SCK is low when idle, read on leading SCK edge, speed=clock/8 (see SPI2X)
+LDI R16, 0b_1101_0001
+UOUT SPCR, R16
+
+//SPSR – SPI Status Register
+//7 – (SPIF): SPI Interrupt Flag	r/o
+//6 – (WCOL): Write COLlision Flag	r/o
+//5:1 – (Res): Reserved Bits		r/o
+//0 – (SPI2X): Double SPI Speed Bit
+LDI R16, 0b_0000_0001
+UOUT SPSR, R16
+
+IN R16, DDRB
+ORI R16, (1<<DDB0)		//Set 1 in PortB Direction Register's zero bit...
+OUT DDRB, R16			//..in order to configure /SS (PB0) as output
+IN R16, PORTB
+ORI R16, (1<<PORTB0)	
+OUT PORTB, R16		
+
+//IN R16, DDRB
+//ORI R16, (1<<DDB0)		//Set 1 in PortB Direction Register's zero bit...
+//OUT DDRB, R16			//..in order to configure /SS (PB0) as output
+//IN R16, PORTB
+//ORI R16, (1<<PORTB0)	
+//OUT PORTB, R16	
 //------------------------------------
 LDI XL, low(uartRX)		//load X pointer with address of SRAM storage...
 LDI XH, high(uartRX)	//...used for store last 8 bytes from USART1
@@ -447,7 +588,7 @@ SEI			//interrupts enabled globally
 Start:
 
 SBRS flagStorage, achtung	//Skip next instruction is there is ACHTUNG!
-RJMP noNewData				//bypass
+RJMP noNewDataUART				//bypass
 
 	ANDI flagStorage, ~(1<<achtung)		//clear ACHTUNG
 
@@ -457,101 +598,148 @@ RJMP noNewData				//bypass
 
 	LD R16, -Y						//look into SRAM, last 3 written bytes deep
 	CPI R16, control3
-	BRNE noNewData		//Branch if not equal to last, 3rd byte of the control sequence
+	BRNE noNewDataUART		//Branch if not equal to last, 3rd byte of the control sequence
 
 		RCALL compareYAndRXStorageStart
 
 		LD R16, -Y
 		CPI R16, control2
-		BRNE noNewData				//Branch if last two received bytes not equal to 3rd and 2nd control sequence bytes
+		BRNE noNewDataUART				//Branch if last two received bytes not equal to 3rd and 2nd control sequence bytes
 
 			RCALL compareYAndRXStorageStart
 
 			LD R16, -Y
 			CPI R16, control1
-			BRNE noNewData			//Branch if last 3 received bytes not equal to 3rd, 2nd and 1st control sequence bytes
+			BRNE noNewDataUART			//Branch if last 3 received bytes not equal to 3rd, 2nd and 1st control sequence bytes
 
 	ORI flagStorage, (1<<transmit)		//Else set TRANSMIT status if proper control sequence is received
 
-noNewData:
+noNewDataUART:
 
+//SBRS flagStorage, spiNewDataReceived
+//RJMP nothingToSendUART				//If the flag isn't set then skip
 
-SBRS flagStorage, transmit
-RJMP nothingToSend				//If the flag isn't set then skip
+	SBRC flagStorage, spiMISOBufferOverflow
+	RJMP uartLoadTXBuffer			
+
+LDS R18, spiMISOWrite
+LDS R16, spiMISORead
+CP R18, R16
+BREQ nothingToSendUART
+
+uartLoadTXBuffer:
 
 SBRC flagStorage, uartTXBufferOverflow
-RJMP nothingToSend				//If the flag is set then skip
+RJMP nothingToSendUART				//If the flag is set then skip, CRITICAL!
+
+LDI YL, low(spiMISO)
+LDI YH, high(spiMISO)
+LDS R18, spiMISORead
+ADD YL, R18
+CLR R18
+ADC YH, R18
+
+LD R16, Y
+
+ANDI flagStorage, ~(1<<spiMISOBufferOverflow)	//Clear MISO overflow flag
+ANDI flagStorage, ~(1<<spiNewDataReceived)	//Clear New Data Received Flag
+
+MOV R10, R16
+RCALL storeR10ToTXBuffer
+UIN R16, UCSR1B
+ORI R16, (1<<UDRIE1)	//Permit interrupt
+UOUT UCSR1B, R16
+
+LDS R18, spiMISORead
+INC R18
+CPI	R18, spiRAMStorageMISOLength	//If write pointer reached the end of MISO buffer...
+BRLO MISOReaderSkip
+	CLR	R18						//...then reset it
+
+MISOReaderSkip:
+
+STS spiMISORead, R18
+
+nothingToSendUART:
+
+//------============--------------===============--------------
+
+SBRS flagStorage, transmit
+RJMP nothingToSendSPI				//If the flag isn't set then skip
+
+SBRC flagStorage, spiMOSIBufferOverflow
+RJMP nothingToSendSPI				//If the flag is set then skip
 
 	MOV R16, R11
-	LDI ZL, Low(uartDataSequence*2)
-	LDI ZH, High(uartDataSequence*2)
+	LDI ZL, Low(spiDataSequence*2)
+	LDI ZH, High(spiDataSequence*2)
 
 	ADD ZL, R16
 	CLR R16
 	ADC ZH, R16
 
-	LPM R16, Z	//Load (from Program Memory) a content of the cell the Z points to
-	MOV R10, R16
-	RCALL storeR10ToTXBuffer
+	LPM R16, Z	//Load (from Program Memory) a content of the cell Z points to
+	MOV R9, R16
+	RCALL storeR9ToMOSIBuffer
 
-	UIN R16, UCSR1B
-	ORI R16, (1<<UDRIE1)	//Permit interrupt
-	UOUT UCSR1B, R16
+	SBRC flagStorage, flag1
+	RJMP firstRunMOSI
+	LDI R16, 0xFF
+	UOUT SPDR, R16
+	ORI flagStorage, (1<<flag1)
+	firstRunMOSI:
 
 	MOV R16, R11
 	INC R16
-	LDI ZL, 14 //we have 15 bytes long sequency
+	LDI ZL, 7 //we have 8 bytes long sequency
 	CP ZL, R16
-	BRGE usartTXSkipLabel1
+	BRGE spiMOSISkipLabel1
 		CLR R16
 		ANDI flagStorage, ~(1<<transmit)
 
-	usartTXSkipLabel1:
+	spiMOSISkipLabel1:
 	MOV R11, R16
 
-nothingToSend:
-
+nothingToSendSPI:
 
 SBRS flagStorage, timeToRefresh			//7-segment digits output routine
 RJMP notATimeToRefresh					//If the flag isn't set then skip
 
 	ANDI flagStorage, ~(1<<timeToRefresh)	//CBR wont work or I am stupid -_- clear the flag
 
-	LDI YL, low(uartRX)
+	LDI YL, low(spiMISO)
+	LDI YH, high(spiMISO)
 	MOV R16, R13
 	ADD YL, R16
 	LDI R16, 0x00
-	LDI YH, high(uartRX)
 	ADC YH, R16
 	LD R16, Y
-	MOV R28, R16
-	MOV R29, R16
-	ANDI R28, 0b_0000_1111		//Mask high and low digits
-	ANDI R29, 0b_1111_0000
-	LSR R29
-	LSR R29
-	LSR R29
-	LSR R29						//Shift high masked digit right 4 times
-	MOV digitToDisp1, R29
-	MOV digitToDisp2, R28		//Display both high and low digit separately on the LED
+	MOV YL, R16
+	MOV YH, R16
+	ANDI YL, 0b_0000_1111		//Mask high and low digits
+	ANDI YH, 0b_1111_0000
+	LSR YH
+	LSR YH
+	LSR YH
+	LSR YH						//Shift high masked digit right 4 times
+	MOV digitToDisp1, YH
+	MOV digitToDisp2, YL		//Display both high and low digit separately on the LED
 
 	MOVW YH:YL, XH:XL
 
 	RCALL compareYAndRXStorageStart
 
 	LD R16, -Y					//Read last stored byte
-	MOV R28, R16
-	MOV R29, R16
-	ANDI R28, 0b_0000_1111		//Mask high and low digits
-	ANDI R29, 0b_1111_0000
-	LSR R29
-	LSR R29
-	LSR R29
-	LSR R29						//Shift high masked digit right 4 times
-	MOV digitToDisp3, R29
-	MOV digitToDisp4, R28		//Display both high and low digit separately on the LED
-
-	CLT			//if everything will be correct (see below) then clear the T flag (which means "incorrect number")
+	MOV YL, R16
+	MOV YH, R16
+	ANDI YL, 0b_0000_1111		//Mask high and low digits
+	ANDI YH, 0b_1111_0000
+	LSR YH
+	LSR YH
+	LSR YH
+	LSR YH						//Shift high masked digit right 4 times
+	MOV digitToDisp3, YH
+	MOV digitToDisp4, YL		//Display both high and low digit separately on the LED
 
 	CPI digitToDisp1, 0x10		//if the 1st register...
 	BRLO HH1			//...is more than F...
@@ -600,6 +788,34 @@ RJMP notATimeToRefresh					//If the flag isn't set then skip
 				SET
 
 	LL4:
+
+		UIN R16, SPCR
+		ANDI R16, ~(1<<SPIE)	//Forbid an interrupt
+		UOUT SPCR, R16
+	
+		UIN R16, UCSR1B
+		ANDI R16, ~(1<<UDRIE1)	//Forbid an interrupt
+		UOUT UCSR1B, R16
+
+	MOV YL, flagStorage
+	MOV YH, flagStorage
+
+		UIN R16, SPCR
+		ORI R16, (1<<SPIE)	//Permit an interrupt
+		UOUT SPCR, R16
+
+		UIN R16, UCSR1B
+		ORI R16, (1<<UDRIE1)	//Permit an interrupt
+		UOUT UCSR1B, R16
+
+	ANDI YL, (1<<spiMISOBufferOverflow)
+	BREQ allesOK
+	ANDI YH, (1<<uartTXBufferOverflow)
+
+	BREQ allesOK
+	SET
+
+	allesOK:
 
 	CPI R17, 0			//Is it time to display 1st digit of LED?
 	BREQ firstDigTeleport
@@ -689,29 +905,77 @@ UIN R16, UCSR1B
 ORI R16, (1<<UDRIE1)	//Permit interrupt(s)
 UOUT UCSR1B, R16
 RET
+
+;----------------------------------
+
+; Store data in SPI MOSI Buffer
+; R9 contains data to be stored in MOSI buffer
+
+storeR9ToMOSIBuffer:
+//Warning: affects YH:YL and R16
+
+UIN R16, SPCR
+ANDI R16, ~(1<<SPIE)	//Forbid ALL THE INTERRUPTS that may affect MOSI buffer and/or its pointers
+UOUT SPCR, R16
+
+LDI	YL, low(spiMOSI)		//Load Y with the start address of the buffer
+LDI	YH, high(spiMOSI)
+LDS R16, spiMOSIWrite	//Load R16 with write pointer
+
+ADD	YL, R16		//Add write pointer to start address...
+CLR	R16
+ADC	YH, R16		//...with carry
+
+MOV R16, R9	//Extract byte from R9...
+
+ST Y, R16	//...and store it in buffer + write pointer
+
+LDS YH, spiMOSIRead		//Get read pointer...
+LDS YL, spiMOSIWrite	//...and write pointer again
+INC YL					//Increment write pointer
+
+CPI	YL, spiRAMStorageMOSILength	//If write pointer reached the end of TX buffer...
+BRLO mosiWriterSkip
+	CLR	YL						//...then reset it
+
+mosiWriterSkip:
+CP YL, YH				//Compare the pointers
+BRNE noMOSIOverflow		//If not equal, then there's no overflow
+
+	//TX buffer overflow
+	ORI flagStorage, (1<<spiMOSIBufferOverflow)	//Set MOSI Overflow flag
+
+noMOSIOverflow:
+STS	spiMOSIWrite, YL	//Save write pointer
+
+UIN R16, SPCR
+ORI R16, (1<<SPIE)	//Permit interrupt(s)
+UOUT SPCR, R16
+
+RET
 ;--------------------------------------------------------------------------------------------
 
-//Decoding the value of R18//
+//Decoding the value of R12//
 Decode:		//if one of 4 digits is chosen, then select a sign to be displayed
 
-LSL R18				//Logical Shift Left: a number gets multiplied by 2 (e.g. 0011<<1 == 0110, 3*2=6)
-LDI ZL, Low(decAddrTable*2)	//Put the low part of the table of addresses' address into the Z
+LSL R12				//Logical Shift Left: a number gets multiplied by 2 (e.g. 0011<<1 == 0110, 3*2=6)
+LDI ZL, Low(decAddrTable*2)	//Put the low part of the table of addresses' address into Z
 LDI ZH, High(decAddrTable*2)	//Same for the high one
 //Note that the preprocessing of the assembler interpretes addresses as words (for using in program counter)
 //And, in order to appeal to specific bytes (not the whole word), we should multiply an address by 2
 
 CLR R16		//CLeaRing the R16
-ADD ZL, R18	//Adding the "offset" to the address of the table of addresses
-ADC ZH, R16	//If there was an overflow string upper ^, the "C" flag should appear
+ADD ZL, R12	//Adding the "offset" to the address of the table of addresses
+ADC ZH, R16	//If there was an overflow string upper ^, "C" flag should appear
 		//So we can handle this flag by ADding zero with Carry 
-//Now the Z points to the beginning of the table PLUS number of cells defined by the R18
-//After all, the Z points exactly to desired address in the table
+//Now Z points to the beginning of the table PLUS number of cells defined by R12
+//After all, Z points exactly to desired address in the table
 
-LPM YL, Z+	//Load (from Program Memory) a content of the cell the Z points to. And increment the Z.
+LPM YL, Z+	//Load (from Program Memory) a content of the cell Z points to. And increment Z.
 LPM YH, Z	//Next part of final destination address
 //LPM command works with bytes, not with words, remember?
 
-MOVW ZH:ZL, YH:YL	//now the desired address goes into the Z
+MOVW ZH:ZL, YH:YL	//now the desired address goes into Z
 
 IJMP	//go to the address of desired subsequence
 //http://easyelectronics.ru/avr-uchebnyj-kurs-vetvleniya.html
@@ -722,29 +986,29 @@ RJMP Start	//Go to start of the Main Routine <--- probably, now with index jumpi
 firstDig:
 LDI R16, 0b_0000_0001		//turn on PC0 (1st digit)
 OUT PORTC, R16
-BRTS dispE			//if the number is incorrect, display the "E" letter ("Err-")
-	MOV R18, digitToDisp1	//Just put an appropriate number (that should be lit) in R18
+	BRTS dispE			//if the number is incorrect, display the "E" letter ("Err-")
+MOV R12, digitToDisp1	//Just put an appropriate number (that should be lit) in R12
 RJMP decode			//go to specific digit displaying
 
 secondDig:
 LDI R16, 0b_0000_0010		//turn on PC1 (2nd digit)
 OUT PORTC, R16
-BRTS dispR			//if the number is incorrect, display the "r" letter ("Err-")
-	MOV R18, digitToDisp2	//Just put an appropriate number (that should be lit) in R18
+	BRTS dispR			//if the number is incorrect, display the "r" letter ("Err-")
+MOV R12, digitToDisp2	//Just put an appropriate number (that should be lit) in R12
 RJMP decode			//go to specific digit displaying
 
 thirdDig:
 LDI R16, 0b_0000_0100		//turn on PC2 (3rd digit)
 OUT PORTC, R16
-BRTS dispR			//if the number is incorrect, display the "r" letter ("Err-")
-	MOV R18, digitToDisp3	//Just put an appropriate number (that should be lit) in R18
+	BRTS dispR			//if the number is incorrect, display the "r" letter ("Err-")
+MOV R12, digitToDisp3	//Just put an appropriate number (that should be lit) in R12
 RJMP decode			//go to specific digit displaying
 
 fourthDig:
 LDI R16, 0b_0000_1000		//turn on PC3 (4th digit)
 OUT PORTC, R16
-BRTS dispDash			//if the number is incorrect, display dash ("Err-")
-	MOV R18, digitToDisp4	//Just put an appropriate number (that should be lit) in R18
+	BRTS dispDash			//if the number is incorrect, display dash ("Err-")
+MOV R12, digitToDisp4	//Just put an appropriate number (that should be lit) in R12
 RJMP decode			//go to specific digit displaying
 ;--------------------------------------------------------------------------------------------
 
