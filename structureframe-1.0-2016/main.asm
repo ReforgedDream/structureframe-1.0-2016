@@ -44,11 +44,10 @@
 .equ transmit =						1		//USART1 transmission should be started
 .equ timeToRefresh =				2		//LED digits should be refreshed
 .equ uartTXBufferOverflow =			3
-.equ spiNewDataReceived =			4
-.equ flag1 =						5
+.equ dummy1 =						4
+.equ dummy2 =						5
 .equ spiMOSIBufferOverflow =		6		
 .equ spiMISOBufferOverflow =		7
-
 
 .equ control1 = 0x61			//"a"
 .equ control2 = 0x77			//"w"
@@ -97,6 +96,7 @@ POP R16			//Extract R16 value from stack
 
 uartRX:				.BYTE uartRAMStorageRXLength	//allocate space for read buffer...
 uartErrorsCounter:	.BYTE 1				//...and for errors counter
+
 uartTX:				.BYTE uartRAMStorageTXLength	//allocate space for write buffer
 uartTXRead:			.BYTE 1
 uartTXWrite:		.BYTE 1
@@ -110,8 +110,8 @@ spiMOSIRead:		.BYTE 1
 spiMOSIWrite:		.BYTE 1		//read and write pointers
 
 subrStartLabel:		.BYTE 2
-subrWriteLabel:		.BYTE 2
 subrReadLabel:		.BYTE 2
+subrWriteLabel:		.BYTE 2
 subrSource:			.BYTE 1
 subrLength:			.BYTE 1
 
@@ -242,7 +242,7 @@ BRLO notALongPreset				//else - exit
 	LDI YL, 0x00	//zeroing the overflows counter
 	LDI YH, 0x00
 	INC R16
-	CPI R16, spiRAMStorageMISOLength		//compare with length of the RX storage
+	CPI R16, spiRAMStorageMOSILength	//compare with length of the RX storage
 	BRNE notALongPreset				//if not equal, then exit, else reset R17 to 0
 	LDI R16, 0						//reset to 0
 
@@ -402,47 +402,6 @@ noMISOOverflow:
 
 STS spiMISOWrite, R18
 
-ORI flagStorage, (1<<spiNewDataReceived)
-
-//------reception completed, data stored in buffer, flag is set------\\
-
-LDS R16, spiMOSIRead
-LDS R18, spiMOSIWrite
-
-SBRC flagStorage, spiMOSIBufferOverflow
-RJMP unreadDataSPI
-
-CP R16, R18
-BRNE unreadDataSPI
-
-	//Buffer is empty
-//	ORI flagStorage, (1<<spiAllDataSent) //we just shifted out all pending data
-	ANDI flagStorage, ~(1<<flag1)		//clear flag
-	RJMP exitMOSIIntTrue
-
-unreadDataSPI:
-
-LDI YL, low(spiMOSI)
-LDI YH, high(spiMOSI)
-ADD YL, R16
-CLR R18
-ADC YH, R18
-
-LD R18, Y
-UOUT SPDR, R18
-
-ANDI flagStorage, ~(1<<spiMOSIBufferOverflow)	//Clear MOSI Overflow flag
-INC R16
-CPI R16, spiRAMStorageMOSILength
-BRLO exitMOSIInt
-CLR R16
-
-exitMOSIInt:
-
-STS spiMOSIRead, R16
-
-exitMOSIIntTrue:
-
    POPSREG
   POP YH
  POP YL
@@ -459,7 +418,7 @@ decAddrTable: .dw disp0, disp1, disp2, disp3, disp4, \
 		disp5, disp6, disp7, disp8, disp9, \
 		dispA, dispB, dispC, dispD, dispE, dispF, \
 		dispR, dispDash	//Adresses of the labels, stored in a certain place (decAddrTable) in program memory
-spiDataSequence: .db 0x00, 0x00, 0xFF, 0xFF, 0xAE, 0x00, 0x66, 0x00
+spiDataSequence: .db 0x69, 0x00, 0x69, 0x64, 0x00, 0x64, 0x69, 0x00
 //					AE		FF		00		FF		66		FF		00		FF
 //0xFF, 0x50, 0x53, 0x08, 0x00, 0x00, 0x00, 0x00
 //NOP, select bank1, read register 8, spam zero 4 times to shift data out
@@ -544,9 +503,23 @@ OUT TIMSK, R16			//set TOIE0 in TIMSK register
 //now we have the overflow interrupt enabled for timer0
 
 //SPI Initialization
+
+;PB3	MISO (SPI Bus Master Input/Slave Output)
+;PB2	MOSI (SPI Bus Master Output/Slave Input)
+;PB1	SCK (SPI Bus Serial Clock)
+;PB0	SS (SPI Slave Select input)
+
+IN R16, DDRB
+ORI R16, (1<<DDB0 | 1<<DDB1 | 1<<DDB2)		//Set 1's in PortB Direction Register
+OUT DDRB, R16			//..in order to configure /SS (PB0) as output
+
+IN R16, PORTB
+ANDI R16, ~(1<<PORTB0)
+OUT PORTB, R16
+
 //SPCR - SPI Control Register
 //7 – (SPIE): SPI Interrupt Enable
-//6 – (SPE): SPI Enable
+//6 – (SPE): SPI Enable 
 //5 – (DORD): Data Order
 //4 – (MSTR): Master/Slave Select
 //3 – (CPOL): Clock Polarity
@@ -558,6 +531,16 @@ OUT TIMSK, R16			//set TOIE0 in TIMSK register
 LDI R16, 0b_1101_0001
 UOUT SPCR, R16
 
+;	SPI2X	SPR1	SPR0	SCK Frequency
+;	0		0		0		f osc / 4
+;	0		0		1		f osc / 16
+;	0		1		0		f osc / 64
+;	0		1		1		f osc / 128
+;	1		0		0		f osc / 2
+;	1		0		1		f osc / 8
+;	1		1		0		f osc / 32
+;	1		1		1		f osc / 64
+
 //SPSR – SPI Status Register
 //7 – (SPIF): SPI Interrupt Flag	r/o
 //6 – (WCOL): Write COLlision Flag	r/o
@@ -566,20 +549,6 @@ UOUT SPCR, R16
 LDI R16, 0b_0000_0001
 UOUT SPSR, R16
 
-IN R16, DDRB
-ORI R16, (1<<DDB0 | 1<<DDB1 | 1<<DDB2)		//Set 1 in PortB Direction Register's zero bit...
-OUT DDRB, R16			//..in order to configure /SS (PB0) as output
-
-IN R16, PORTB
-ORI R16, (1<<PORTB0)
-OUT PORTB, R16
-
-//IN R16, DDRB
-//ORI R16, (1<<DDB0)		//Set 1 in PortB Direction Register's zero bit...
-//OUT DDRB, R16			//..in order to configure /SS (PB0) as output
-//IN R16, PORTB
-//ORI R16, (1<<PORTB0)	
-//OUT PORTB, R16	
 //------------------------------------
 LDI XL, low(uartRX)		//load X pointer with address of SRAM storage...
 LDI XH, high(uartRX)	//...used for store last 8 bytes from USART1
@@ -623,9 +592,6 @@ RJMP noNewDataUART				//bypass
 
 noNewDataUART:
 
-//SBRS flagStorage, spiNewDataReceived
-//RJMP nothingToSendUART				//If the flag isn't set then skip
-
 	SBRC flagStorage, spiMISOBufferOverflow
 	RJMP uartLoadTXBuffer			
 
@@ -649,7 +615,6 @@ ADC YH, R18
 LD R16, Y
 
 ANDI flagStorage, ~(1<<spiMISOBufferOverflow)	//Clear MISO overflow flag
-ANDI flagStorage, ~(1<<spiNewDataReceived)	//Clear New Data Received Flag
 
 STS subrSource, R16
 
@@ -731,33 +696,65 @@ RJMP nothingToSendSPI				//If the flag is set then skip
 	SBRC R16, 5			//no matter which bit will be tested: in case of overflow the byte equals 0xFF
 	ORI flagStorage, (1<<spiMOSIBufferOverflow)
 	
-	SBRC flagStorage, flag1
-	RJMP firstRunMOSI
-	LDI R16, 0xFF
-	UOUT SPDR, R16
-	ORI flagStorage, (1<<flag1)
-	firstRunMOSI:
-
 	MOV R16, R11
 	INC R16
-	LDI ZL, 1 //we have 2 bytes long sequency
+	LDI ZL, 7 //we have 8 bytes long sequency
 	CP ZL, R16
 	BRGE spiMOSISkipLabel1
 		CLR R16
-		ANDI flagStorage, ~(1<<transmit)
+//		ANDI flagStorage, ~(1<<transmit)
 
 	spiMOSISkipLabel1:
 	MOV R11, R16
 
 nothingToSendSPI:
 
+//------============--------------===============--------------
+LDS R16, spiMOSIRead
+LDS R18, spiMOSIWrite
+
+SBRC flagStorage, spiMOSIBufferOverflow
+RJMP unreadDataSPI
+
+CP R16, R18
+BRNE unreadDataSPI
+
+	//Buffer is empty
+//	ORI flagStorage, (1<<spiAllDataSent) //we just shifted out all pending data
+	RJMP exitMOSIRoutineTrue
+
+unreadDataSPI:
+
+LDI YL, low(spiMOSI)
+LDI YH, high(spiMOSI)
+ADD YL, R16
+CLR R18
+ADC YH, R18
+
+LD R18, Y
+UOUT SPDR, R18
+
+ANDI flagStorage, ~(1<<spiMOSIBufferOverflow)	//Clear MOSI Overflow flag
+INC R16
+CPI R16, spiRAMStorageMOSILength
+BRLO exitMOSIRoutine
+CLR R16
+
+exitMOSIRoutine:
+
+STS spiMOSIRead, R16
+
+exitMOSIRoutineTrue:
+
+//------============--------------===============--------------
+
 SBRS flagStorage, timeToRefresh			//7-segment digits output routine
 RJMP notATimeToRefresh					//If the flag isn't set then skip
 
 	ANDI flagStorage, ~(1<<timeToRefresh)	//CBR wont work or I am stupid -_- clear the flag
 
-	LDI YL, low(spiMISO)
-	LDI YH, high(spiMISO)
+	LDI YL, low(spiMOSI)
+	LDI YH, high(spiMOSI)
 	MOV R16, R13
 	ADD YL, R16
 	LDI R16, 0x00
@@ -776,11 +773,6 @@ RJMP notATimeToRefresh					//If the flag isn't set then skip
 
 	MOV R16, R13
 
-;	MOVW YH:YL, XH:XL
-;
-;	RCALL compareYAndRXStorageStart
-;
-;	LD R16, -Y					//Read last stored byte
 	MOV YL, R16
 	MOV YH, R16
 	ANDI YL, 0b_0000_1111		//Mask high and low digits
@@ -840,33 +832,14 @@ RJMP notATimeToRefresh					//If the flag isn't set then skip
 
 	LL4:
 
-		UIN R16, SPCR
-		ANDI R16, ~(1<<SPIE)	//Forbid an interrupt
-		UOUT SPCR, R16
-	
-		UIN R16, UCSR1B
-		ANDI R16, ~(1<<UDRIE1)	//Forbid an interrupt
-		UOUT UCSR1B, R16
-
-	MOV YL, flagStorage
-	MOV YH, flagStorage
-
-		UIN R16, SPCR
-		ORI R16, (1<<SPIE)	//Permit an interrupt
-		UOUT SPCR, R16
-
-		UIN R16, UCSR1B
-		ORI R16, (1<<UDRIE1)	//Permit an interrupt
-		UOUT UCSR1B, R16
-
-	ANDI YL, (1<<spiMISOBufferOverflow)
-	BREQ allesOK
-	ANDI YH, (1<<uartTXBufferOverflow)
-
-	BREQ allesOK
+	SBRC flagStorage, spiMOSIBufferOverflow
 	SET
 
-	allesOK:
+	SBRC flagStorage, spiMISOBufferOverflow
+	SET
+
+	SBRC flagStorage, uartTXBufferOverflow
+	SET
 
 	CPI R17, 0			//Is it time to display 1st digit of LED?
 	BREQ firstDigTeleport
@@ -951,7 +924,7 @@ storeToRAMBuffer:
 	INC YL				//Increment write pointer
 
 	LDS R16, subrLength
-	CP	YL, R16			//If write pointer reached the end of the buffer...
+	CP YL, R16			//If write pointer reached the end of the buffer...
 	BRLO subrSkip1
 	CLR	YL			//...then reset it
 
@@ -978,93 +951,6 @@ RET
 	STS subrSource, R16
 	RJMP subrExit
 
-;----------------------------------
-
-; Store data in USART TX Buffer
-; R10 contains data to be stored in TX buffer
-
-;storeR10ToTXBuffer:
-//Warning: affects YH:YL and R16
-
-;CLI
-
-;LDI	YL, low(uartTX)		//Load Y with the start address of the buffer
-;LDI	YH, high(uartTX)
-;LDS R16, uartTXWrite	//Load R16 with write pointer
-
-;ADD	YL, R16		//Add write pointer to start address...
-;CLR	R16
-;ADC	YH, R16		//...with carry
-
-;MOV R16, R10	//Extract byte from R10...
-
-;ST Y, R16		//...and store it in buffer + write pointer
-
-;LDS YH, uartTXRead	//Get read pointer...
-;LDS YL, uartTXWrite	//...and write pointer again
-;INC YL				//Increment write pointer
-
-;CPI	YL, uartRAMStorageTXLength	//If write pointer reached the end of TX buffer...
-;BRLO TXWriterSkip
-;	CLR	YL						//...then reset it
-
-;TXWriterSkip:
-;CP YL, YH				//Compare the pointers
-;BRNE noTXOverflow		//If not equal, then there's no overflow
-
-	//TX buffer overflow
-;	ORI flagStorage, (1<<uartTXBufferOverflow)	//Set TX Overflow flag
-
-;noTXOverflow:
-;STS	uartTXWrite, YL	//Save write pointer
-
-;SEI
-
-;RET
-
-;----------------------------------
-
-; Store data in SPI MOSI Buffer
-; R9 contains data to be stored in MOSI buffer
-
-;storeR9ToMOSIBuffer:
-//Warning: affects YH:YL and R16
-
-;CLI
-
-;LDI	YL, low(spiMOSI)		//Load Y with the start address of the buffer
-;LDI	YH, high(spiMOSI)
-;LDS R16, spiMOSIWrite	//Load R16 with write pointer
-
-;ADD	YL, R16		//Add write pointer to start address...
-;CLR	R16
-;ADC	YH, R16		//...with carry
-
-;MOV R16, R9	//Extract byte from R9...
-
-;ST Y, R16	//...and store it in buffer + write pointer
-
-;LDS YH, spiMOSIRead		//Get read pointer...
-;LDS YL, spiMOSIWrite	//...and write pointer again
-;INC YL					//Increment write pointer
-
-;CPI	YL, spiRAMStorageMOSILength	//If write pointer reached the end of TX buffer...
-;BRLO mosiWriterSkip
-;	CLR	YL						//...then reset it
-
-;mosiWriterSkip:
-;CP YL, YH				//Compare the pointers
-;BRNE noMOSIOverflow		//If not equal, then there's no overflow
-
-	//TX buffer overflow
-;	ORI flagStorage, (1<<spiMOSIBufferOverflow)	//Set MOSI Overflow flag
-
-;noMOSIOverflow:
-;STS	spiMOSIWrite, YL	//Save write pointer
-
-;SEI
-
-;RET
 ;--------------------------------------------------------------------------------------------
 
 //Decoding the value of R12//
