@@ -1,5 +1,5 @@
 
-AVRASM ver. 2.2.0  C:\Data\Ёлектроника\Atmel Studio projects\structureframe-1.0-2016\structureframe-1.0-2016\main.asm Wed Mar 30 18:36:35 2016
+AVRASM ver. 2.2.0  C:\Data\Ёлектроника\Atmel Studio projects\structureframe-1.0-2016\structureframe-1.0-2016\main.asm Thu Apr 07 13:37:21 2016
 
 [builtin](2): Including file 'C:/Program Files (x86)\Atmel\Studio\7.0\Packs\atmel\ATmega_DFP\1.0.98\avrasm\inc\m64adef.inc'
 C:\Data\Ёлектроника\Atmel Studio projects\structureframe-1.0-2016\structureframe-1.0-2016\main.asm(2): Including file 'C:/Program Files (x86)\Atmel\Studio\7.0\Packs\atmel\ATmega_DFP\1.0.98\avrasm\inc\m64adef.inc'
@@ -1319,7 +1319,6 @@ C:\Data\Ёлектроника\Atmel Studio projects\structureframe-1.0-2016\structureframe
                  .equ spiMOSIBufferOverflow =		6		
                  .equ spiMISOBufferOverflow =		7
                  
-                 
                  .equ control1 = 0x61			//"a"
                  .equ control2 = 0x77			//"w"
                  .equ control3 = 0x6B			//"k" (ASCII)
@@ -1367,6 +1366,7 @@ C:\Data\Ёлектроника\Atmel Studio projects\structureframe-1.0-2016\structureframe
                  
 000100           uartRX:				.BYTE uartRAMStorageRXLength	//allocate space for read buffer...
 000108           uartErrorsCounter:	.BYTE 1				//...and for errors counter
+                 
 000109           uartTX:				.BYTE uartRAMStorageTXLength	//allocate space for write buffer
 000111           uartTXRead:			.BYTE 1
 000112           uartTXWrite:		.BYTE 1
@@ -1380,8 +1380,8 @@ C:\Data\Ёлектроника\Atmel Studio projects\structureframe-1.0-2016\structureframe
 000126           spiMOSIWrite:		.BYTE 1		//read and write pointers
                  
 000127           subrStartLabel:		.BYTE 2
-000129           subrWriteLabel:		.BYTE 2
-00012b           subrReadLabel:		.BYTE 2
+000129           subrReadLabel:		.BYTE 2
+00012b           subrWriteLabel:		.BYTE 2
 00012d           subrSource:			.BYTE 1
 00012e           subrLength:			.BYTE 1
                  
@@ -1390,7 +1390,7 @@ C:\Data\Ёлектроника\Atmel Studio projects\structureframe-1.0-2016\structureframe
                  //Reset and Interrupt Vectors table
                  
                  	.ORG 0x0000	;(RESET) 
-000000 c113      	RJMP Reset
+000000 c0d4      	RJMP Reset
                  
                  	.ORG INT0addr	;(INT0) External Interrupt Request 0
 000002 9518      	RETI
@@ -1427,7 +1427,8 @@ C:\Data\Ёлектроника\Atmel Studio projects\structureframe-1.0-2016\structureframe
 000020 c025      	RJMP Timer0Over
                  
                  	.ORG SPIaddr	;(SPI,STC) Serial Transfer Complete
-000022 c09f      	RJMP SPIcomplete
+000022 9518      	RETI
+                 //	RJMP SPIcomplete
                  
                  	.ORG URXC0addr	;(USART0,RXC) USART0, Rx Complete
 000024 9518      	RETI
@@ -1514,7 +1515,7 @@ C:\Data\Ёлектроника\Atmel Studio projects\structureframe-1.0-2016\structureframe
 00005f e0c0      	LDI YL, 0x00	//zeroing the overflows counter
 000060 e0d0      	LDI YH, 0x00
 000061 9503      	INC R16
-000062 3008      	CPI R16, spiRAMStorageMISOLength		//compare with length of the RX storage
+000062 3008      	CPI R16, uartRAMStorageTXLength		//compare with length of the RX storage
 000063 f409      	BRNE notALongPreset				//if not equal, then exit, else reset R17 to 0
 000064 e000      	LDI R16, 0						//reset to 0
                  
@@ -1649,120 +1650,113 @@ C:\Data\Ёлектроника\Atmel Studio projects\structureframe-1.0-2016\structureframe
                  
                  SPIcomplete:	//SPI serial transfer complete interrupt
                  
-0000c2 932f      PUSH R18
-0000c3 93cf       PUSH YL
-0000c4 93df        PUSH YH
-0000c5 930f
-0000c6 b70f
-0000c7 930f         PUSHSREG
+                 ;PUSH R18
+                 ; PUSH YL
+                 ;  PUSH YH
+                 ;   PUSHSREG
                  
-0000c8 b10f      UIN R16, SPDR
+                 ;UIN R16, SPDR
                  
-0000c9 e1c3      LDI YL, low(spiMISO)
-0000ca e0d1      LDI YH, high(spiMISO)
-0000cb 9120 011c LDS R18, spiMISOWrite
-0000cd 0fc2      ADD YL, R18
-0000ce 2722      CLR R18
-0000cf 1fd2      ADC YH, R18
+                 ;LDI YL, low(spiMISO)
+                 ;LDI YH, high(spiMISO)
+                 ;LDS R18, spiMISOWrite
+                 ;ADD YL, R18
+                 ;CLR R18
+                 ;ADC YH, R18
                  
-0000d0 8308      ST Y, R16
+                 ;ST Y, R16
                  
-0000d1 9120 011c LDS R18, spiMISOWrite
-0000d3 9523      INC R18
-0000d4 3028      CPI	R18, spiRAMStorageMISOLength	//If write pointer reached the end of MISO buffer...
-0000d5 f008      BRLO MISOWriterSkip
-0000d6 2722      	CLR	R18						//...then reset it
+                 ;LDS R18, spiMISOWrite
+                 ;INC R18
+                 ;CPI	R18, spiRAMStorageMISOLength	//If write pointer reached the end of MISO buffer...
+                 ;BRLO MISOWriterSkip
+                 ;	CLR	R18						//...then reset it
                  
-                 MISOWriterSkip:
+                 ;MISOWriterSkip:
                  
-0000d7 9100 011b LDS R16, spiMISORead
-0000d9 1702      CP R16, R18
-0000da f409      BRNE noMISOOverflow		//If not equal, then there's no overflow
+                 ;LDS R16, spiMISORead
+                 ;CP R16, R18
+                 ;BRNE noMISOOverflow		//If not equal, then there's no overflow
                  
                  	//MISO buffer overflow
-0000db 6830      	ORI flagStorage, (1<<spiMISOBufferOverflow)	//Set MISO Overflow flag
+                 ;	ORI flagStorage, (1<<spiMISOBufferOverflow)	//Set MISO Overflow flag
                  
-                 noMISOOverflow:
+                 ;noMISOOverflow:
                  
-0000dc 9320 011c STS spiMISOWrite, R18
+                 ;STS spiMISOWrite, R18
                  
-0000de 6130      ORI flagStorage, (1<<spiNewDataReceived)
+                 ;ORI flagStorage, (1<<spiNewDataReceived)
                  
                  //------reception completed, data stored in buffer, flag is set------\\
                  
-0000df 9100 0125 LDS R16, spiMOSIRead
-0000e1 9120 0126 LDS R18, spiMOSIWrite
+                 ;LDS R16, spiMOSIRead
+                 ;LDS R18, spiMOSIWrite
                  
-0000e3 fd36      SBRC flagStorage, spiMOSIBufferOverflow
-0000e4 c004      RJMP unreadDataSPI
+                 ;SBRC flagStorage, spiMOSIBufferOverflow
+                 ;RJMP unreadDataSPI
                  
-0000e5 1702      CP R16, R18
-0000e6 f411      BRNE unreadDataSPI
+                 ;CP R16, R18
+                 ;BRNE unreadDataSPI
                  
                  	//Buffer is empty
                  //	ORI flagStorage, (1<<spiAllDataSent) //we just shifted out all pending data
-0000e7 7d3f      	ANDI flagStorage, ~(1<<flag1)		//clear flag
-0000e8 c00e      	RJMP exitMOSIIntTrue
+                 ;	ANDI flagStorage, ~(1<<flag1)		//clear flag
+                 ;	RJMP exitMOSIIntTrue
                  
-                 unreadDataSPI:
+                 ;unreadDataSPI:
                  
-0000e9 e1cd      LDI YL, low(spiMOSI)
-0000ea e0d1      LDI YH, high(spiMOSI)
-0000eb 0fc0      ADD YL, R16
-0000ec 2722      CLR R18
-0000ed 1fd2      ADC YH, R18
+                 ;LDI YL, low(spiMOSI)
+                 ;LDI YH, high(spiMOSI)
+                 ;ADD YL, R16
+                 ;CLR R18
+                 ;ADC YH, R18
                  
-0000ee 8128      LD R18, Y
-0000ef b92f      UOUT SPDR, R18
+                 ;LD R18, Y
+                 ;UOUT SPDR, R18
                  
-0000f0 7b3f      ANDI flagStorage, ~(1<<spiMOSIBufferOverflow)	//Clear MOSI Overflow flag
-0000f1 9503      INC R16
-0000f2 3008      CPI R16, spiRAMStorageMOSILength
-0000f3 f008      BRLO exitMOSIInt
-0000f4 2700      CLR R16
+                 ;ANDI flagStorage, ~(1<<spiMOSIBufferOverflow)	//Clear MOSI Overflow flag
+                 ;INC R16
+                 ;CPI R16, spiRAMStorageMOSILength
+                 ;BRLO exitMOSIInt
+                 ;CLR R16
                  
-                 exitMOSIInt:
+                 ;exitMOSIInt:
                  
-0000f5 9300 0125 STS spiMOSIRead, R16
+                 ;STS spiMOSIRead, R16
                  
-                 exitMOSIIntTrue:
+                 ;exitMOSIIntTrue:
                  
-0000f7 910f
-0000f8 bf0f
-0000f9 910f         POPSREG
-0000fa 91df        POP YH
-0000fb 91cf       POP YL
-0000fc 912f      POP R18
+                 ;   POPSREG
+                 ;  POP YH
+                 ; POP YL
+                 ;POP R18
                  
-0000fd 9518      RETI
+0000c2 9518      RETI
                  
                  ;-------------------
                  //End of Interrupts Handler//
                  
                  ;--------------------------------------------------------------------------------------------
                  //Storage of static data in flash
-0000fe 0282
-0000ff 0285
-000100 0288
-000101 028b
-000102 028e      decAddrTable: .dw disp0, disp1, disp2, disp3, disp4, \
-000103 0291
-000104 0294
-000105 0297
-000106 029a
-000107 029d      		disp5, disp6, disp7, disp8, disp9, \
-000108 02a0
-000109 02a3
-00010a 02a6
-00010b 02a9
-00010c 02ac
-00010d 02af      		dispA, dispB, dispC, dispD, dispE, dispF, \
-00010e 02b2
-00010f 02b5      		dispR, dispDash	//Adresses of the labels, stored in a certain place (decAddrTable) in program memory
-000110 0000
-000111 ffff
-000112 00ae
-000113 0066      spiDataSequence: .db 0x00, 0x00, 0xFF, 0xFF, 0xAE, 0x00, 0x66, 0x00
+0000c3 01f4
+0000c4 01f7
+0000c5 01fa
+0000c6 01fd
+0000c7 0200      decAddrTable: .dw disp0, disp1, disp2, disp3, disp4, \
+0000c8 0203
+0000c9 0206
+0000ca 0209
+0000cb 020c
+0000cc 020f      		disp5, disp6, disp7, disp8, disp9, \
+0000cd 0212
+0000ce 0215
+0000cf 0218
+0000d0 021b
+0000d1 021e
+0000d2 0221      		dispA, dispB, dispC, dispD, dispE, dispF, \
+0000d3 0224
+0000d4 0227      		dispR, dispDash	//Adresses of the labels, stored in a certain place (decAddrTable) in program memory
+                 ;spiDataSequence: .db 0x00, 0x01, 0x03, 0x05, 0x07, 0x09, 0x0B, 0xBB
                  //					AE		FF		00		FF		66		FF		00		FF
                  //0xFF, 0x50, 0x53, 0x08, 0x00, 0x00, 0x00, 0x00
                  //NOP, select bank1, read register 8, spam zero 4 times to shift data out
@@ -1770,43 +1764,43 @@ C:\Data\Ёлектроника\Atmel Studio projects\structureframe-1.0-2016\structureframe
                  Reset:
                  
                  //SRAM flush
-000114 e0e0      			LDI	ZL, Low(SRAM_START)	; Load Z with SRAM start address
-000115 e0f1      			LDI	ZH, High(SRAM_START)
-000116 2700      			CLR	R16					; R16 <- 0x00
-000117 9301      Flush:		ST 	Z+, R16				; Flush byte and increment
-000118 31f1      			CPI	ZH, High(RAMEND+1)	; Is ZH == high half of the RAMEND address?
-000119 f7e9      			BRNE Flush				; Loop if no
+0000d5 e0e0      			LDI	ZL, Low(SRAM_START)	; Load Z with SRAM start address
+0000d6 e0f1      			LDI	ZH, High(SRAM_START)
+0000d7 2700      			CLR	R16					; R16 <- 0x00
+0000d8 9301      Flush:		ST 	Z+, R16				; Flush byte and increment
+0000d9 31f1      			CPI	ZH, High(RAMEND+1)	; Is ZH == high half of the RAMEND address?
+0000da f7e9      			BRNE Flush				; Loop if no
                   
-00011a 30e0      			CPI	ZL,Low(RAMEND+1)	; Same for low half of the address
-00011b f7d9      			BRNE Flush
+0000db 30e0      			CPI	ZL,Low(RAMEND+1)	; Same for low half of the address
+0000dc f7d9      			BRNE Flush
                  
-00011c 27ee      		CLR	ZL
-00011d 27ff      		CLR	ZH
+0000dd 27ee      		CLR	ZL
+0000de 27ff      		CLR	ZH
                  
                  //R0-R31 flush
-00011e e1ee      	LDI	ZL, 0x1E	; Address of R30 (in SRAM address space)
-00011f 27ff      	CLR	ZH
-000120 95ea      	DEC	ZL			; Decrement address (flushing begins from R29 since we use R30:R31 as an address pointer)
-000121 83f0      	ST Z, ZH		; Load register with zero
-000122 f7e9      	BRNE PC-2		; If Zero flag is cleared step back 2 times
+0000df e1ee      	LDI	ZL, 0x1E	; Address of R30 (in SRAM address space)
+0000e0 27ff      	CLR	ZH
+0000e1 95ea      	DEC	ZL			; Decrement address (flushing begins from R29 since we use R30:R31 as an address pointer)
+0000e2 83f0      	ST Z, ZH		; Load register with zero
+0000e3 f7e9      	BRNE PC-2		; If Zero flag is cleared step back 2 times
                  
                  //Thanks for code to DI HALT, Testicq and all fellow comrades from easyelectronics.ru
                  
                  //Stack initialization
-000123 ef0f      LDI R16, Low(RAMEND)
-000124 bf0d      OUT SPL, R16
-000125 e100      LDI R16, High(RAMEND)
-000126 bf0e      OUT SPH, R16
+0000e4 ef0f      LDI R16, Low(RAMEND)
+0000e5 bf0d      OUT SPL, R16
+0000e6 e100      LDI R16, High(RAMEND)
+0000e7 bf0e      OUT SPH, R16
                  
                  //USART1 Initialization
                  ; Set baud rate
                  ; 2400 baud -> 0x01A0
                  ; 9600 baud -> 0x0067
                  ; 1Mbaud -> 0x0000
-000127 e000      LDI R16, 0x00
-000128 9300 0098 UOUT UBRR1H, R16
-00012a e000      LDI R16, 0x00
-00012b 9300 0099 UOUT UBRR1L, R16
+0000e8 e000      LDI R16, 0x00
+0000e9 9300 0098 UOUT UBRR1H, R16
+0000eb e000      LDI R16, 0x00
+0000ec 9300 0099 UOUT UBRR1L, R16
                  
                  ; 7 - (RXC1) USART Receive Complete					(r/o)
                  ; 6 - (TXC1) USART Transmit Complete (clearing by writing 1)
@@ -1816,8 +1810,8 @@ C:\Data\Ёлектроника\Atmel Studio projects\structureframe-1.0-2016\structureframe
                  ; 2 - (UPE1) USART Parity Error (must be set to 0)	(r/o)
                  ; 1 - (U2X1) Double the USART Transmission Speed
                  ; 0 - (MPCM1) Multi-Processor Communication Mode
-00012d e400      LDI R16, 0b_0100_0000
-00012e 9300 009b UOUT UCSR1A, R16
+0000ee e400      LDI R16, 0b_0100_0000
+0000ef 9300 009b UOUT UCSR1A, R16
                  
                  ; 7 - (RXCIE1) RX Complete Interrupt Enable
                  ; 6 - (TXCIE1) TX Complete Interrupt Enable
@@ -1828,28 +1822,42 @@ C:\Data\Ёлектроника\Atmel Studio projects\structureframe-1.0-2016\structureframe
                  ; 1 - (RXB81) Receive Data Bit 8 (for nine data bits only)	(r/o)
                  ; 0 - (TXB81) Transmit Data Bit 8 (for nine data bits only)
                  ; TX Complete' and 'UDR Empty' interrupts enable, enable receiver and transmitter, no ninth bit:
-000130 eb08      LDI R16, 0b_1011_1000
-000131 9300 009a UOUT UCSR1B, R16
+0000f1 eb08      LDI R16, 0b_1011_1000
+0000f2 9300 009a UOUT UCSR1B, R16
                  
                  ; Set frame format: asynchronous operation, no parity, 8 data, 1 stop bit
-000133 e006      LDI R16, 0b_0000_0110
-000134 9300 009d UOUT UCSR1C, R16
+0000f4 e006      LDI R16, 0b_0000_0110
+0000f5 9300 009d UOUT UCSR1C, R16
                  
                  //GPIO Initialization
-000136 ef0f      LDI R16, 0xFF
-000137 bb04      OUT DDRC, R16			//write 1-s into each port C...
-000138 bb0a      OUT DDRA, R16			//...and port A direction registers
+0000f7 ef0f      LDI R16, 0xFF
+0000f8 bb04      OUT DDRC, R16			//write 1-s into each port C...
+0000f9 bb0a      OUT DDRA, R16			//...and port A direction registers
                  
                  //Timer0 Initialization
-000139 e001      LDI R16, 0b_0000_0001	//set CS00 bit in TCCR0 register
-00013a bf03      OUT TCCR0, R16			//now using system clock for Timer0 without prescaler
-00013b bf07      OUT TIMSK, R16			//set TOIE0 in TIMSK register
+0000fa e001      LDI R16, 0b_0000_0001	//set CS00 bit in TCCR0 register
+0000fb bf03      OUT TCCR0, R16			//now using system clock for Timer0 without prescaler
+0000fc bf07      OUT TIMSK, R16			//set TOIE0 in TIMSK register
                  //now we have the overflow interrupt enabled for timer0
                  
                  //SPI Initialization
+                 
+                 ;PB3	MISO (SPI Bus Master Input/Slave Output)
+                 ;PB2	MOSI (SPI Bus Master Output/Slave Input)
+                 ;PB1	SCK (SPI Bus Serial Clock)
+                 ;PB0	SS (SPI Slave Select input)
+                 
+0000fd b307      IN R16, DDRB
+0000fe 6007      ORI R16, (1<<DDB0 | 1<<DDB1 | 1<<DDB2)		//Set 1's in PortB Direction Register
+0000ff bb07      OUT DDRB, R16			//..in order to configure /SS (PB0) as output
+                 
+000100 b308      IN R16, PORTB
+000101 7f0e      ANDI R16, ~(1<<PORTB0)
+000102 bb08      OUT PORTB, R16
+                 
                  //SPCR - SPI Control Register
                  //7 Ц (SPIE): SPI Interrupt Enable
-                 //6 Ц (SPE): SPI Enable
+                 //6 Ц (SPE): SPI Enable 
                  //5 Ц (DORD): Data Order
                  //4 Ц (MSTR): Master/Slave Select
                  //3 Ц (CPOL): Clock Polarity
@@ -1858,362 +1866,449 @@ C:\Data\Ёлектроника\Atmel Studio projects\structureframe-1.0-2016\structureframe
                  //0 - (SPR0): SPI Clock Rate Select 0
                  //Int. enable, SPI enable, MSBit first, Master Mode, ...
                  //...SCK is low when idle, read on leading SCK edge, speed=clock/8 (see SPI2X)
-00013c ed01      LDI R16, 0b_1101_0001
-00013d b90d      UOUT SPCR, R16
+                 ;LDI R16, 0b_1101_0001
+000103 e501      LDI R16, 0b_0101_0001
+000104 b90d      UOUT SPCR, R16
+                 
+                 ;	SPI2X	SPR1	SPR0	SCK Frequency
+                 ;	0		0		0		f osc / 4
+                 ;	0		0		1		f osc / 16
+                 ;	0		1		0		f osc / 64
+                 ;	0		1		1		f osc / 128
+                 ;	1		0		0		f osc / 2
+                 ;	1		0		1		f osc / 8
+                 ;	1		1		0		f osc / 32
+                 ;	1		1		1		f osc / 64
                  
                  //SPSR Ц SPI Status Register
                  //7 Ц (SPIF): SPI Interrupt Flag	r/o
                  //6 Ц (WCOL): Write COLlision Flag	r/o
                  //5:1 Ц (Res): Reserved Bits		r/o
                  //0 Ц (SPI2X): Double SPI Speed Bit
-00013e e001      LDI R16, 0b_0000_0001
-00013f b90e      UOUT SPSR, R16
+000105 e001      LDI R16, 0b_0000_0001
+000106 b90e      UOUT SPSR, R16
                  
-000140 b307      IN R16, DDRB
-000141 6007      ORI R16, (1<<DDB0 | 1<<DDB1 | 1<<DDB2)		//Set 1 in PortB Direction Register's zero bit...
-000142 bb07      OUT DDRB, R16			//..in order to configure /SS (PB0) as output
-                 
-000143 b308      IN R16, PORTB
-000144 6001      ORI R16, (1<<PORTB0)
-000145 bb08      OUT PORTB, R16
-                 
-                 //IN R16, DDRB
-                 //ORI R16, (1<<DDB0)		//Set 1 in PortB Direction Register's zero bit...
-                 //OUT DDRB, R16			//..in order to configure /SS (PB0) as output
-                 //IN R16, PORTB
-                 //ORI R16, (1<<PORTB0)	
-                 //OUT PORTB, R16	
                  //------------------------------------
-000146 e0a0      LDI XL, low(uartRX)		//load X pointer with address of SRAM storage...
-000147 e0b1      LDI XH, high(uartRX)	//...used for store last 8 bytes from USART1
+000107 e0a0      LDI XL, low(uartRX)		//load X pointer with address of SRAM storage...
+000108 e0b1      LDI XH, high(uartRX)	//...used for store last 8 bytes from USART1
                  
-000148 94e8      CLT						//clear T flag which means "incorrect number to display"
+000109 94e8      CLT						//clear T flag which means "incorrect number to display"
                  
-000149 e000      LDI R16, 0x00			//clear R16 for the order's sake
+00010a e000      LDI R16, 0x00			//clear R16 for the order's sake
                  
-00014a 9478      SEI			//interrupts enabled globally
+00010b 9478      SEI			//interrupts enabled globally
                  
                  ;--------------------------------------------------------------------------------------------
                  //Main Routine//
                  Start:
                  
-00014b ff30      SBRS flagStorage, achtung	//Skip next instruction is there is ACHTUNG!
-00014c c00f      RJMP noNewDataUART				//bypass
+00010c ff30      SBRS flagStorage, achtung	//Skip next instruction is there is ACHTUNG!
+00010d c00f      RJMP noNewDataUART				//bypass
                  
-00014d 7f3e      	ANDI flagStorage, ~(1<<achtung)		//clear ACHTUNG
+00010e 7f3e      	ANDI flagStorage, ~(1<<achtung)		//clear ACHTUNG
                  
-00014e 01ed      	MOVW YH:YL, XH:XL				//Load X pointer
+00010f 01ed      	MOVW YH:YL, XH:XL				//Load X pointer
                  
-00014f d0dc      	RCALL compareYAndRXStorageStart
+000110 d08d      	RCALL compareYAndRXStorageStart
                  
-000150 910a      	LD R16, -Y						//look into SRAM, last 3 written bytes deep
-000151 360b      	CPI R16, control3
-000152 f449      	BRNE noNewDataUART		//Branch if not equal to last, 3rd byte of the control sequence
+000111 910a      	LD R16, -Y						//look into SRAM, last 3 written bytes deep
+000112 360b      	CPI R16, control3
+000113 f449      	BRNE noNewDataUART		//Branch if not equal to last, 3rd byte of the control sequence
                  
-000153 d0d8      		RCALL compareYAndRXStorageStart
+000114 d089      		RCALL compareYAndRXStorageStart
                  
-000154 910a      		LD R16, -Y
-000155 3707      		CPI R16, control2
-000156 f429      		BRNE noNewDataUART				//Branch if last two received bytes not equal to 3rd and 2nd control sequence bytes
+000115 910a      		LD R16, -Y
+000116 3707      		CPI R16, control2
+000117 f429      		BRNE noNewDataUART				//Branch if last two received bytes not equal to 3rd and 2nd control sequence bytes
                  
-000157 d0d4      			RCALL compareYAndRXStorageStart
+000118 d085      			RCALL compareYAndRXStorageStart
                  
-000158 910a      			LD R16, -Y
-000159 3601      			CPI R16, control1
-00015a f409      			BRNE noNewDataUART			//Branch if last 3 received bytes not equal to 3rd, 2nd and 1st control sequence bytes
+000119 910a      			LD R16, -Y
+00011a 3601      			CPI R16, control1
+00011b f409      			BRNE noNewDataUART			//Branch if last 3 received bytes not equal to 3rd, 2nd and 1st control sequence bytes
                  
-00015b 6032      	ORI flagStorage, (1<<transmit)		//Else set TRANSMIT status if proper control sequence is received
+00011c 6032      	ORI flagStorage, (1<<transmit)		//Else set TRANSMIT status if proper control sequence is received
                  
                  noNewDataUART:
+                 
+                 //---------------
+                 //---==DEBUG==---
+                 //---------------
+00011d ff31      SBRS flagStorage, transmit
+00011e c011      RJMP debugLabel1				//If the flag isn't set then skip
+                 
+                 ;SBRS flagStorage, achtung	//Skip next instruction is there is ACHTUNG!
+                 ;RJMP debugLabel1				//bypass
+                 
+                 ;	ANDI flagStorage, ~(1<<achtung)		//clear ACHTUNG
+                 
+                 ;	MOVW YH:YL, XH:XL
+                 ;	RCALL compareYAndRXStorageStart
+                 ;	LD R16, -Y					//Read last stored byte
+                 
+00011f 3020      CPI R18, 0x00
+000120 f409      BRNE labela
+000121 e000      LDI R16, 0x00
+                 
+                 labela:
+000122 3021      CPI R18, 0x01
+000123 f409      BRNE labelb
+000124 e604      LDI R16, 0x64
+                 
+                 labelb:
+000125 3022      CPI R18, 0x02
+000126 f409      BRNE labelc
+000127 e200      LDI R16, 0x20
+                 
+                 labelc:
+000128 3023      CPI R18, 0x03
+000129 f409      BRNE labeld
+00012a e609      LDI R16, 0x69
+                 
+                 labeld:
+                 
+00012b 9523      INC R18
+00012c 3024      CPI R18, 0x04
+00012d f409      BRNE labelz
+00012e 2722      CLR R18
+                 labelz:
+                 
+00012f b90f      	UOUT SPDR, R16
+                 //	ANDI flagStorage, ~(1<<transmit)
+                 
+                 debugLabel1:
+                 
+000130 9b77      SBIS SPSR, SPIF
+000131 c022      RJMP debugLabel2
+                 
+000132 b10f      UIN R16, SPDR
+000133 9300 012d STS subrSource, R16
+                 
+000135 e009      LDI R16, low(uartTX)
+000136 9300 0127 	STS subrStartLabel, R16
+000138 e001      LDI R16, high(uartTX)
+000139 9300 0128 	STS (subrStartLabel+1), R16
+00013b e102      LDI R16, low(uartTXWrite)
+00013c 9300 012b 	STS subrWriteLabel, R16
+00013e e001      LDI R16, high(uartTXWrite)
+00013f 9300 012c 	STS (subrWriteLabel+1), R16
+000141 e101      LDI R16, low(uartTXRead)
+000142 9300 0129 	STS subrReadLabel, R16
+000144 e001      LDI R16, high(uartTXRead)
+000145 9300 012a 	STS (subrReadLabel+1), R16
+000147 e008      LDI R16, uartRAMStorageTXLength
+000148 9300 012e 	STS subrLength, R16
+                 
+00014a d05a      RCALL storeToRAMBuffer
+                 
+00014b 9100 012d LDS R16, subrSource
+00014d fd05      SBRC R16, 5			//no matter which bit will be tested: in case of overflow the byte equals 0xFF
+00014e 6038      ORI flagStorage, (1<<uartTXBufferOverflow)
+                 
+00014f 9100 009a UIN R16, UCSR1B
+000151 6200      ORI R16, (1<<UDRIE1)	//Permit interrupt
+000152 9300 009a UOUT UCSR1B, R16
+                 
+                 debugLabel2:
+                 
+                 //----------------
+                 //---==!DEBUG==---
+                 //----------------
                  
                  //SBRS flagStorage, spiNewDataReceived
                  //RJMP nothingToSendUART				//If the flag isn't set then skip
                  
-00015c fd37      	SBRC flagStorage, spiMISOBufferOverflow
-00015d c006      	RJMP uartLoadTXBuffer			
+                 ;	SBRC flagStorage, spiMISOBufferOverflow
+                 ;	RJMP uartLoadTXBuffer			
                  
-00015e 9120 011c LDS R18, spiMISOWrite
-000160 9100 011b LDS R16, spiMISORead
-000162 1720      CP R18, R16
-000163 f1a9      BREQ nothingToSendUART
+                 ;LDS R18, spiMISOWrite
+                 ;LDS R16, spiMISORead
+                 ;CP R18, R16
+                 ;BREQ nothingToSendUART
                  
-                 uartLoadTXBuffer:
+                 ;uartLoadTXBuffer:
                  
-000164 fd33      SBRC flagStorage, uartTXBufferOverflow
-000165 c033      RJMP nothingToSendUART				//If the flag is set then skip, CRITICAL!
+                 ;SBRC flagStorage, uartTXBufferOverflow
+                 ;RJMP nothingToSendUART				//If the flag is set then skip, CRITICAL!
                  
-000166 e1c3      LDI YL, low(spiMISO)
-000167 e0d1      LDI YH, high(spiMISO)
-000168 9120 011b LDS R18, spiMISORead
-00016a 0fc2      ADD YL, R18
-00016b 2722      CLR R18
-00016c 1fd2      ADC YH, R18
+                 ;LDI YL, low(spiMISO)
+                 ;LDI YH, high(spiMISO)
+                 ;LDS R18, spiMISORead
+                 ;ADD YL, R18
+                 ;CLR R18
+                 ;ADC YH, R18
                  
-00016d 8108      LD R16, Y
+                 ;LD R16, Y
                  
-00016e 773f      ANDI flagStorage, ~(1<<spiMISOBufferOverflow)	//Clear MISO overflow flag
-00016f 7e3f      ANDI flagStorage, ~(1<<spiNewDataReceived)	//Clear New Data Received Flag
+                 ;ANDI flagStorage, ~(1<<spiMISOBufferOverflow)	//Clear MISO overflow flag
+                 ;ANDI flagStorage, ~(1<<spiNewDataReceived)	//Clear New Data Received Flag
                  
-000170 9300 012d STS subrSource, R16
+                 ;STS subrSource, R16
                  
-000172 e009      LDI R16, low(uartTX)
-000173 9300 0127 	STS subrStartLabel, R16
-000175 e001      LDI R16, high(uartTX)
-000176 9300 0128 	STS (subrStartLabel+1), R16
-000178 e102      LDI R16, low(uartTXWrite)
-000179 9300 0129 	STS subrWriteLabel, R16
-00017b e001      LDI R16, high(uartTXWrite)
-00017c 9300 012a 	STS (subrWriteLabel+1), R16
-00017e e101      LDI R16, low(uartTXRead)
-00017f 9300 012b 	STS subrReadLabel, R16
-000181 e001      LDI R16, high(uartTXRead)
-000182 9300 012c 	STS (subrReadLabel+1), R16
-000184 e008      LDI R16, uartRAMStorageTXLength
-000185 9300 012e 	STS subrLength, R16
+                 ;LDI R16, low(uartTX)
+                 ;	STS subrStartLabel, R16
+                 ;LDI R16, high(uartTX)
+                 ;	STS (subrStartLabel+1), R16
+                 ;LDI R16, low(uartTXWrite)
+                 ;	STS subrWriteLabel, R16
+                 ;LDI R16, high(uartTXWrite)
+                 ;	STS (subrWriteLabel+1), R16
+                 ;LDI R16, low(uartTXRead)
+                 ;	STS subrReadLabel, R16
+                 ;LDI R16, high(uartTXRead)
+                 ;	STS (subrReadLabel+1), R16
+                 ;LDI R16, uartRAMStorageTXLength
+                 ;	STS subrLength, R16
                  
-000187 d0ab      RCALL storeToRAMBuffer
+                 ;RCALL storeToRAMBuffer
                  
-000188 9100 012d LDS R16, subrSource
-00018a fd05      SBRC R16, 5			//no matter which bit will be tested: in case of overflow the byte equals 0xFF
-00018b 6038      ORI flagStorage, (1<<uartTXBufferOverflow)
+                 ;LDS R16, subrSource
+                 ;SBRC R16, 5			//no matter which bit will be tested: in case of overflow the byte equals 0xFF
+                 ;ORI flagStorage, (1<<uartTXBufferOverflow)
                  
-00018c 9100 009a UIN R16, UCSR1B
-00018e 6200      ORI R16, (1<<UDRIE1)	//Permit interrupt
-00018f 9300 009a UOUT UCSR1B, R16
+                 ;UIN R16, UCSR1B
+                 ;ORI R16, (1<<UDRIE1)	//Permit interrupt
+                 ;UOUT UCSR1B, R16
                  
-000191 9120 011b LDS R18, spiMISORead
-000193 9523      INC R18
-000194 3028      CPI	R18, spiRAMStorageMISOLength	//If write pointer reached the end of MISO buffer...
-000195 f008      BRLO MISOReaderSkip
-000196 2722      	CLR	R18						//...then reset it
+                 ;LDS R18, spiMISORead
+                 ;INC R18
+                 ;CPI	R18, spiRAMStorageMISOLength	//If write pointer reached the end of MISO buffer...
+                 ;BRLO MISOReaderSkip
+                 ;	CLR	R18						//...then reset it
                  
-                 MISOReaderSkip:
+                 ;MISOReaderSkip:
                  
-000197 9320 011b STS spiMISORead, R18
+                 ;STS spiMISORead, R18
                  
-                 nothingToSendUART:
+                 ;nothingToSendUART:
                  
                  //------============--------------===============--------------
                  
-000199 ff31      SBRS flagStorage, transmit
-00019a c032      RJMP nothingToSendSPI				//If the flag isn't set then skip
+                 ;SBRS flagStorage, transmit
+                 ;RJMP nothingToSendSPI				//If the flag isn't set then skip
                  
-00019b fd36      SBRC flagStorage, spiMOSIBufferOverflow
-00019c c030      RJMP nothingToSendSPI				//If the flag is set then skip
+                 ;SBRC flagStorage, spiMOSIBufferOverflow
+                 ;RJMP nothingToSendSPI				//If the flag is set then skip
                  
-00019d 2d0b      	MOV R16, R11
-00019e e2e0      	LDI ZL, Low(spiDataSequence*2)
-00019f e0f2      	LDI ZH, High(spiDataSequence*2)
+                 ;	MOV R16, R11
+                 ;	LDI ZL, Low(spiDataSequence*2)
+                 ;	LDI ZH, High(spiDataSequence*2)
                  
-0001a0 0fe0      	ADD ZL, R16
-0001a1 2700      	CLR R16
-0001a2 1ff0      	ADC ZH, R16
+                 ;	ADD ZL, R16
+                 ;	CLR R16
+                 ;	ADC ZH, R16
                  
-0001a3 9104      	LPM R16, Z	//Load (from Program Memory) a content of the cell Z points to
+                 ;	LPM R16, Z	//Load (from Program Memory) a content of the cell Z points to
                  
-0001a4 9300 012d 	STS subrSource, R16
+                 ;	STS subrSource, R16
                  
-0001a6 e10d      	LDI R16, low(spiMOSI)
-0001a7 9300 0127 		STS subrStartLabel, R16
-0001a9 e001      	LDI R16, high(spiMOSI)
-0001aa 9300 0128 		STS (subrStartLabel+1), R16
-0001ac e206      	LDI R16, low(spiMOSIWrite)
-0001ad 9300 0129 		STS subrWriteLabel, R16
-0001af e001      	LDI R16, high(spiMOSIWrite)
-0001b0 9300 012a 		STS (subrWriteLabel+1), R16
-0001b2 e205      	LDI R16, low(spiMOSIRead)
-0001b3 9300 012b 		STS subrReadLabel, R16
-0001b5 e001      	LDI R16, high(spiMOSIRead)
-0001b6 9300 012c 		STS (subrReadLabel+1), R16
-0001b8 e008      	LDI R16, spiRAMStorageMOSILength
-0001b9 9300 012e 		STS subrLength, R16
+                 ;	LDI R16, low(spiMOSI)
+                 ;		STS subrStartLabel, R16
+                 ;	LDI R16, high(spiMOSI)
+                 ;		STS (subrStartLabel+1), R16
+                 ;	LDI R16, low(spiMOSIWrite)
+                 ;		STS subrWriteLabel, R16
+                 ;	LDI R16, high(spiMOSIWrite)
+                 ;		STS (subrWriteLabel+1), R16
+                 ;	LDI R16, low(spiMOSIRead)
+                 ;		STS subrReadLabel, R16
+                 ;	LDI R16, high(spiMOSIRead)
+                 ;		STS (subrReadLabel+1), R16
+                 ;	LDI R16, spiRAMStorageMOSILength
+                 ;		STS subrLength, R16
                  
-0001bb d077      	RCALL storeToRAMBuffer
+                 ;	RCALL storeToRAMBuffer
                  
-0001bc 9100 012d 	LDS R16, subrSource
-0001be fd05      	SBRC R16, 5			//no matter which bit will be tested: in case of overflow the byte equals 0xFF
-0001bf 6430      	ORI flagStorage, (1<<spiMOSIBufferOverflow)
+                 ;	LDS R16, subrSource
+                 ;	SBRC R16, 5			//no matter which bit will be tested: in case of overflow the byte equals 0xFF
+                 ;	ORI flagStorage, (1<<spiMOSIBufferOverflow)
                  	
-0001c0 fd35      	SBRC flagStorage, flag1
-0001c1 c003      	RJMP firstRunMOSI
-0001c2 ef0f      	LDI R16, 0xFF
-0001c3 b90f      	UOUT SPDR, R16
-0001c4 6230      	ORI flagStorage, (1<<flag1)
-                 	firstRunMOSI:
+                 ;	SBRC flagStorage, flag1
+                 ;	RJMP firstRunMOSI
+                 ;	LDI R16, 0xFF
+                 ;	UOUT SPDR, R16
+                 ;	ORI flagStorage, (1<<flag1)
+                 ;	firstRunMOSI:
                  
-0001c5 2d0b      	MOV R16, R11
-0001c6 9503      	INC R16
-0001c7 e0e1      	LDI ZL, 1 //we have 2 bytes long sequency
-0001c8 17e0      	CP ZL, R16
-0001c9 f414      	BRGE spiMOSISkipLabel1
-0001ca 2700      		CLR R16
-0001cb 7f3d      		ANDI flagStorage, ~(1<<transmit)
+                 ;	MOV R16, R11
+                 ;	INC R16
+                 ;	LDI ZL, 7 //we have 8 bytes long sequency
+                 ;	CP ZL, R16
+                 ;	BRGE spiMOSISkipLabel1
+                 ;		CLR R16
+                 ;		ANDI flagStorage, ~(1<<transmit)
                  
-                 	spiMOSISkipLabel1:
-0001cc 2eb0      	MOV R11, R16
+                 ;	spiMOSISkipLabel1:
+                 ;	MOV R11, R16
                  
-                 nothingToSendSPI:
+                 ;nothingToSendSPI:
                  
-0001cd ff32      SBRS flagStorage, timeToRefresh			//7-segment digits output routine
-0001ce c054      RJMP notATimeToRefresh					//If the flag isn't set then skip
+000154 ff32      SBRS flagStorage, timeToRefresh			//7-segment digits output routine
+000155 c03f      RJMP notATimeToRefresh					//If the flag isn't set then skip
                  
-0001cf 7f3b      	ANDI flagStorage, ~(1<<timeToRefresh)	//CBR wont work or I am stupid -_- clear the flag
+000156 7f3b      	ANDI flagStorage, ~(1<<timeToRefresh)	//CBR wont work or I am stupid -_- clear the flag
                  
-0001d0 e1c3      	LDI YL, low(spiMISO)
-0001d1 e0d1      	LDI YH, high(spiMISO)
-0001d2 2d0d      	MOV R16, R13
-0001d3 0fc0      	ADD YL, R16
-0001d4 e000      	LDI R16, 0x00
-0001d5 1fd0      	ADC YH, R16
-0001d6 8108      	LD R16, Y
-0001d7 2fc0      	MOV YL, R16
-0001d8 2fd0      	MOV YH, R16
-0001d9 70cf      	ANDI YL, 0b_0000_1111		//Mask high and low digits
-0001da 7fd0      	ANDI YH, 0b_1111_0000
-0001db 95d6      	LSR YH
-0001dc 95d6      	LSR YH
-0001dd 95d6      	LSR YH
-0001de 95d6      	LSR YH						//Shift high masked digit right 4 times
-0001df 2f5d      	MOV digitToDisp1, YH
-0001e0 2f6c      	MOV digitToDisp2, YL		//Display both high and low digit separately on the LED
+000157 e0c9      	LDI YL, low(uartTX)
+000158 e0d1      	LDI YH, high(uartTX)
+000159 2d0d      	MOV R16, R13
+00015a 0fc0      	ADD YL, R16
+00015b e000      	LDI R16, 0x00
+00015c 1fd0      	ADC YH, R16
+00015d 8108      	LD R16, Y
+00015e 2fc0      	MOV YL, R16
+00015f 2fd0      	MOV YH, R16
+000160 70cf      	ANDI YL, 0b_0000_1111		//Mask high and low digits
+000161 7fd0      	ANDI YH, 0b_1111_0000
+000162 95d6      	LSR YH
+000163 95d6      	LSR YH
+000164 95d6      	LSR YH
+000165 95d6      	LSR YH						//Shift high masked digit right 4 times
+000166 2f5d      	MOV digitToDisp1, YH
+000167 2f6c      	MOV digitToDisp2, YL		//Display both high and low digit separately on the LED
                  
-0001e1 2d0d      	MOV R16, R13
+000168 2d0d      	MOV R16, R13
                  
                  ;	MOVW YH:YL, XH:XL
                  ;
                  ;	RCALL compareYAndRXStorageStart
                  ;
                  ;	LD R16, -Y					//Read last stored byte
-0001e2 2fc0      	MOV YL, R16
-0001e3 2fd0      	MOV YH, R16
-0001e4 70cf      	ANDI YL, 0b_0000_1111		//Mask high and low digits
-0001e5 7fd0      	ANDI YH, 0b_1111_0000
-0001e6 95d6      	LSR YH
-0001e7 95d6      	LSR YH
-0001e8 95d6      	LSR YH
-0001e9 95d6      	LSR YH						//Shift high masked digit right 4 times
-0001ea 2f7d      	MOV digitToDisp3, YH
-0001eb 2f4c      	MOV digitToDisp4, YL		//Display both high and low digit separately on the LED
+000169 2fc0      	MOV YL, R16
+00016a 2fd0      	MOV YH, R16
+00016b 70cf      	ANDI YL, 0b_0000_1111		//Mask high and low digits
+00016c 7fd0      	ANDI YH, 0b_1111_0000
+00016d 95d6      	LSR YH
+00016e 95d6      	LSR YH
+00016f 95d6      	LSR YH
+000170 95d6      	LSR YH						//Shift high masked digit right 4 times
+000171 2f7d      	MOV digitToDisp3, YH
+000172 2f4c      	MOV digitToDisp4, YL		//Display both high and low digit separately on the LED
                  
-0001ec 3150      	CPI digitToDisp1, 0x10		//if the 1st register...
-0001ed f008      	BRLO HH1			//...is more than F...
-0001ee 9468      	SET				//...then set the T flag (which means "incorrect number")
+000173 3150      	CPI digitToDisp1, 0x10		//if the 1st register...
+000174 f008      	BRLO HH1			//...is more than F...
+000175 9468      	SET				//...then set the T flag (which means "incorrect number")
                  
                  	HH1:
                  
-0001ef 3160      		CPI digitToDisp2, 0x10		//if the 2nd one...
-0001f0 f008      		BRLO HH2			//...is more than F...
-0001f1 9468      		SET				//...then set the T flag (which means "incorrect number")
+000176 3160      		CPI digitToDisp2, 0x10		//if the 2nd one...
+000177 f008      		BRLO HH2			//...is more than F...
+000178 9468      		SET				//...then set the T flag (which means "incorrect number")
                  
                  	HH2:
                  
-0001f2 3170      			CPI digitToDisp3, 0x10		//if the 3rd one...
-0001f3 f008      			BRLO HH3			//...is more than F...
-0001f4 9468      			SET				//...then set the T flag (which means "incorrect number")
+000179 3170      			CPI digitToDisp3, 0x10		//if the 3rd one...
+00017a f008      			BRLO HH3			//...is more than F...
+00017b 9468      			SET				//...then set the T flag (which means "incorrect number")
                  
                  	HH3:
                  
-0001f5 3140      				CPI digitToDisp4, 0x10		//if the 4th one...
-0001f6 f008      				BRLO HH4			//...is more than F...
-0001f7 9468      				SET				//...then set the T flag (which means "incorrect number")
+00017c 3140      				CPI digitToDisp4, 0x10		//if the 4th one...
+00017d f008      				BRLO HH4			//...is more than F...
+00017e 9468      				SET				//...then set the T flag (which means "incorrect number")
                  
                  	HH4:
                  
-0001f8 3050      	CPI digitToDisp1, 0x00		//same for less than 0
-0001f9 f40a      	BRPL LL1			//BRanch if PLus (if the N flag in SREG is cleared)
-0001fa 9468      	SET
+00017f 3050      	CPI digitToDisp1, 0x00		//same for less than 0
+000180 f40a      	BRPL LL1			//BRanch if PLus (if the N flag in SREG is cleared)
+000181 9468      	SET
                  
                  	LL1:
                  
-0001fb 3060      		CPI digitToDisp2, 0x00
-0001fc f40a      		BRPL LL2			//BRanch if PLus (if the N flag in SREG is cleared)
-0001fd 9468      		SET
+000182 3060      		CPI digitToDisp2, 0x00
+000183 f40a      		BRPL LL2			//BRanch if PLus (if the N flag in SREG is cleared)
+000184 9468      		SET
                  
                  	LL2:
                  
-0001fe 3070      			CPI digitToDisp3, 0x00
-0001ff f40a      			BRPL LL3			//BRanch if PLus (if the N flag in SREG is cleared)
-000200 9468      			SET
+000185 3070      			CPI digitToDisp3, 0x00
+000186 f40a      			BRPL LL3			//BRanch if PLus (if the N flag in SREG is cleared)
+000187 9468      			SET
                  
                  	LL3:
                  
-000201 3040      				CPI digitToDisp4, 0x00
-000202 f40a      				BRPL LL4			//BRanch if PLus (if the N flag in SREG is cleared)
-000203 9468      				SET
+000188 3040      				CPI digitToDisp4, 0x00
+000189 f40a      				BRPL LL4			//BRanch if PLus (if the N flag in SREG is cleared)
+00018a 9468      				SET
                  
                  	LL4:
                  
-000204 b10d      		UIN R16, SPCR
-000205 770f      		ANDI R16, ~(1<<SPIE)	//Forbid an interrupt
-000206 b90d      		UOUT SPCR, R16
+                 ;		UIN R16, SPCR
+                 ;		ANDI R16, ~(1<<SPIE)	//Forbid an interrupt
+                 ;		UOUT SPCR, R16
                  	
-000207 9100 009a 		UIN R16, UCSR1B
-000209 7d0f      		ANDI R16, ~(1<<UDRIE1)	//Forbid an interrupt
-00020a 9300 009a 		UOUT UCSR1B, R16
+                 ;		UIN R16, UCSR1B
+                 ;		ANDI R16, ~(1<<UDRIE1)	//Forbid an interrupt
+                 ;		UOUT UCSR1B, R16
                  
-00020c 2fc3      	MOV YL, flagStorage
-00020d 2fd3      	MOV YH, flagStorage
+                 ;	MOV YL, flagStorage
+                 ;	MOV YH, flagStorage
                  
-00020e b10d      		UIN R16, SPCR
-00020f 6800      		ORI R16, (1<<SPIE)	//Permit an interrupt
-000210 b90d      		UOUT SPCR, R16
+                 ;		UIN R16, SPCR
+                 ;		ORI R16, (1<<SPIE)	//Permit an interrupt
+                 ;		UOUT SPCR, R16
                  
-000211 9100 009a 		UIN R16, UCSR1B
-000213 6200      		ORI R16, (1<<UDRIE1)	//Permit an interrupt
-000214 9300 009a 		UOUT UCSR1B, R16
+                 ;		UIN R16, UCSR1B
+                 ;		ORI R16, (1<<UDRIE1)	//Permit an interrupt
+                 ;		UOUT UCSR1B, R16
                  
-000216 78c0      	ANDI YL, (1<<spiMISOBufferOverflow)
-000217 f019      	BREQ allesOK
-000218 70d8      	ANDI YH, (1<<uartTXBufferOverflow)
+                 ;	ANDI YL, (1<<spiMISOBufferOverflow)
+                 ;	BREQ allesOK
+                 ;	ANDI YH, (1<<uartTXBufferOverflow)
                  
-000219 f009      	BREQ allesOK
-00021a 9468      	SET
+                 ;	BREQ allesOK
+                 ;	SET
                  
-                 	allesOK:
+                 ;	allesOK:
                  
-00021b 3010      	CPI R17, 0			//Is it time to display 1st digit of LED?
-00021c f039      	BREQ firstDigTeleport
+                 ;	SBRC flagStorage, spiMISOBufferOverflow
+                 ;	SET
+                 
+00018b fd33      	SBRC flagStorage, uartTXBufferOverflow
+00018c 9468      	SET
+                 
+00018d 3010      	CPI R17, 0			//Is it time to display 1st digit of LED?
+00018e f039      	BREQ firstDigTeleport
                  	
-00021d 3011      	CPI R17, 1			//Is it time to display 2nd digit of LED?
-00021e f039      	BREQ secondDigTeleport
+00018f 3011      	CPI R17, 1			//Is it time to display 2nd digit of LED?
+000190 f039      	BREQ secondDigTeleport
                  
-00021f 3012      	CPI R17, 2			//Is it time to display 3rd digit of LED?
-000220 f039      	BREQ thirdDigTeleport
+000191 3012      	CPI R17, 2			//Is it time to display 3rd digit of LED?
+000192 f039      	BREQ thirdDigTeleport
                  
-000221 3013      	CPI R17, 3			//Is it time to display 3rd digit of LED?
-000222 f039      	BREQ fourthDigTeleport
+000193 3013      	CPI R17, 3			//Is it time to display 3rd digit of LED?
+000194 f039      	BREQ fourthDigTeleport
                  
                  notATimeToRefresh:
                  
-000223 cf27      RJMP Start		//Go to start
+000195 cf76      RJMP Start		//Go to start
                  //End of Main Routine//
                  ;--------------------------------------------------------------------------------------------
                  
                  firstDigTeleport:
-000224 940c 026e JMP firstDig
+000196 940c 01e0 JMP firstDig
                  
                  secondDigTeleport:
-000226 940c 0273 JMP secondDig
+000198 940c 01e5 JMP secondDig
                  
                  thirdDigTeleport:
-000228 940c 0278 JMP thirdDig
+00019a 940c 01ea JMP thirdDig
                  
                  fourthDigTeleport:
-00022a 940c 027d JMP fourthDig		// ^__^'
+00019c 940c 01ef JMP fourthDig		// ^__^'
                  ;--------------------------------------------------------------------------------------------
                  
                  //Subroutines
                  
                  compareYAndRXStorageStart:
                  //Warning: affects YH:YL and R16
-00022c e000      LDI R16, low(uartRX)		//Check if we at the start address
-00022d 17c0      	CP YL, R16
-00022e e001      LDI R16, high(uartRX)
-00022f 07d0      	CPC YH, R16
-000230 f409      BRNE jumpNotEnd
-000231 9628      ADIW YH:YL, uartRAMStorageRXLength	//If so, go to the end of the storage and one byte further
+00019e e000      LDI R16, low(uartRX)		//Check if we at the start address
+00019f 17c0      	CP YL, R16
+0001a0 e001      LDI R16, high(uartRX)
+0001a1 07d0      	CPC YH, R16
+0001a2 f409      BRNE jumpNotEnd
+0001a3 9628      ADIW YH:YL, uartRAMStorageRXLength	//If so, go to the end of the storage and one byte further
                  jumpNotEnd:
-000232 9508      RET
+0001a4 9508      RET
                  
                  ;----------------------------------
                  
@@ -2227,59 +2322,59 @@ C:\Data\Ёлектроника\Atmel Studio projects\structureframe-1.0-2016\structureframe
                  ;subrLength:		.BYTE 1
                  //Returns 0x00 in subrSource if there's no overflow, else returns 0xFF
                  
-000233 94f8      	CLI
+0001a5 94f8      	CLI
                  
-000234 91c0 0127 	LDS YL, subrStartLabel
-000236 91d0 0128 	LDS YH, (subrStartLabel+1)
-000238 91e0 0129 	LDS ZL, subrWriteLabel
-00023a 91f0 012a 	LDS ZH, (subrWriteLabel+1)
-00023c 8100      	LD R16, Z
+0001a6 91c0 0127 	LDS YL, subrStartLabel
+0001a8 91d0 0128 	LDS YH, (subrStartLabel+1)
+0001aa 91e0 012b 	LDS ZL, subrWriteLabel
+0001ac 91f0 012c 	LDS ZH, (subrWriteLabel+1)
+0001ae 8100      	LD R16, Z
                  
-00023d 0fc0      	ADD	YL, R16		//Add write pointer to start address...
-00023e 2700      	CLR	R16
-00023f 1fd0      	ADC	YH, R16		//...with carry
+0001af 0fc0      	ADD	YL, R16		//Add write pointer to start address...
+0001b0 2700      	CLR	R16
+0001b1 1fd0      	ADC	YH, R16		//...with carry
                  
-000240 9100 012d 	LDS R16, subrSource
+0001b2 9100 012d 	LDS R16, subrSource
                  
-000242 8308      	ST Y, R16		//...and store it in buffer + write pointer
+0001b4 8308      	ST Y, R16		//...and store it in buffer + write pointer
                  
-000243 91e0 012b 	LDS ZL, subrReadLabel
-000245 91f0 012c 	LDS ZH, (subrReadLabel+1)
-000247 81d0      	LD YH, Z
+0001b5 91e0 0129 	LDS ZL, subrReadLabel
+0001b7 91f0 012a 	LDS ZH, (subrReadLabel+1)
+0001b9 81d0      	LD YH, Z
                  
-000248 91e0 0129 	LDS ZL, subrWriteLabel
-00024a 91f0 012a 	LDS ZH, (subrWriteLabel+1)
-00024c 81c0      	LD YL, Z
+0001ba 91e0 012b 	LDS ZL, subrWriteLabel
+0001bc 91f0 012c 	LDS ZH, (subrWriteLabel+1)
+0001be 81c0      	LD YL, Z
                  
-00024d 95c3      	INC YL				//Increment write pointer
+0001bf 95c3      	INC YL				//Increment write pointer
                  
-00024e 9100 012e 	LDS R16, subrLength
-000250 17c0      	CP	YL, R16			//If write pointer reached the end of the buffer...
-000251 f008      	BRLO subrSkip1
-000252 27cc      	CLR	YL			//...then reset it
+0001c0 9100 012e 	LDS R16, subrLength
+0001c2 17c0      	CP YL, R16			//If write pointer reached the end of the buffer...
+0001c3 f008      	BRLO subrSkip1
+0001c4 27cc      	CLR	YL			//...then reset it
                  
                  	subrSkip1:
                  
-000253 17cd      	CP YL, YH				//Compare the pointers
-000254 f051      	BREQ subrOverflow		//If not equal, then there's no overflow
+0001c5 17cd      	CP YL, YH				//Compare the pointers
+0001c6 f051      	BREQ subrOverflow		//If not equal, then there's no overflow
                  
                  		//TX buffer overflow
-000255 e000      		LDI R16, 0x00
-000256 9300 012d 		STS subrSource, R16
+0001c7 e000      		LDI R16, 0x00
+0001c8 9300 012d 		STS subrSource, R16
                  
                  	subrExit:
-000258 91e0 0129 	LDS ZL, subrWriteLabel
-00025a 91f0 012a 	LDS ZH, (subrWriteLabel+1)
-00025c 83c0      	ST Z, YL	//Save write pointer
+0001ca 91e0 012b 	LDS ZL, subrWriteLabel
+0001cc 91f0 012c 	LDS ZH, (subrWriteLabel+1)
+0001ce 83c0      	ST Z, YL	//Save write pointer
                  
-00025d 9478      	SEI
+0001cf 9478      	SEI
                  
-00025e 9508      RET
+0001d0 9508      RET
                  
                  	subrOverflow:
-00025f ef0f      	LDI R16, 0xFF
-000260 9300 012d 	STS subrSource, R16
-000262 cff5      	RJMP subrExit
+0001d1 ef0f      	LDI R16, 0xFF
+0001d2 9300 012d 	STS subrSource, R16
+0001d4 cff5      	RJMP subrExit
                  
                  ;----------------------------------
                  
@@ -2373,153 +2468,153 @@ C:\Data\Ёлектроника\Atmel Studio projects\structureframe-1.0-2016\structureframe
                  //Decoding the value of R12//
                  Decode:		//if one of 4 digits is chosen, then select a sign to be displayed
                  
-000263 0ccc      LSL R12				//Logical Shift Left: a number gets multiplied by 2 (e.g. 0011<<1 == 0110, 3*2=6)
-000264 efec      LDI ZL, Low(decAddrTable*2)	//Put the low part of the table of addresses' address into Z
-000265 e0f1      LDI ZH, High(decAddrTable*2)	//Same for the high one
+0001d5 0ccc      LSL R12				//Logical Shift Left: a number gets multiplied by 2 (e.g. 0011<<1 == 0110, 3*2=6)
+0001d6 e8e6      LDI ZL, Low(decAddrTable*2)	//Put the low part of the table of addresses' address into Z
+0001d7 e0f1      LDI ZH, High(decAddrTable*2)	//Same for the high one
                  //Note that the preprocessing of the assembler interpretes addresses as words (for using in program counter)
                  //And, in order to appeal to specific bytes (not the whole word), we should multiply an address by 2
                  
-000266 2700      CLR R16		//CLeaRing the R16
-000267 0dec      ADD ZL, R12	//Adding the "offset" to the address of the table of addresses
-000268 1ff0      ADC ZH, R16	//If there was an overflow string upper ^, "C" flag should appear
+0001d8 2700      CLR R16		//CLeaRing the R16
+0001d9 0dec      ADD ZL, R12	//Adding the "offset" to the address of the table of addresses
+0001da 1ff0      ADC ZH, R16	//If there was an overflow string upper ^, "C" flag should appear
                  		//So we can handle this flag by ADding zero with Carry 
                  //Now Z points to the beginning of the table PLUS number of cells defined by R12
                  //After all, Z points exactly to desired address in the table
                  
-000269 91c5      LPM YL, Z+	//Load (from Program Memory) a content of the cell Z points to. And increment Z.
-00026a 91d4      LPM YH, Z	//Next part of final destination address
+0001db 91c5      LPM YL, Z+	//Load (from Program Memory) a content of the cell Z points to. And increment Z.
+0001dc 91d4      LPM YH, Z	//Next part of final destination address
                  //LPM command works with bytes, not with words, remember?
                  
-00026b 01fe      MOVW ZH:ZL, YH:YL	//now the desired address goes into Z
+0001dd 01fe      MOVW ZH:ZL, YH:YL	//now the desired address goes into Z
                  
-00026c 9409      IJMP	//go to the address of desired subsequence
+0001de 9409      IJMP	//go to the address of desired subsequence
                  //http://easyelectronics.ru/avr-uchebnyj-kurs-vetvleniya.html
                  
-00026d cedd      RJMP Start	//Go to start of the Main Routine <--- probably, now with index jumping, this string is useless
+0001df cf2c      RJMP Start	//Go to start of the Main Routine <--- probably, now with index jumping, this string is useless
                  ;--------------------------------------------------------------------------------------------
                  
                  firstDig:
-00026e e001      LDI R16, 0b_0000_0001		//turn on PC0 (1st digit)
-00026f bb05      OUT PORTC, R16
-000270 f1de      	BRTS dispE			//if the number is incorrect, display the "E" letter ("Err-")
-000271 2ec5      MOV R12, digitToDisp1	//Just put an appropriate number (that should be lit) in R12
-000272 cff0      RJMP decode			//go to specific digit displaying
+0001e0 e001      LDI R16, 0b_0000_0001		//turn on PC0 (1st digit)
+0001e1 bb05      OUT PORTC, R16
+0001e2 f1de      	BRTS dispE			//if the number is incorrect, display the "E" letter ("Err-")
+0001e3 2ec5      MOV R12, digitToDisp1	//Just put an appropriate number (that should be lit) in R12
+0001e4 cff0      RJMP decode			//go to specific digit displaying
                  
                  secondDig:
-000273 e002      LDI R16, 0b_0000_0010		//turn on PC1 (2nd digit)
-000274 bb05      OUT PORTC, R16
-000275 f1e6      	BRTS dispR			//if the number is incorrect, display the "r" letter ("Err-")
-000276 2ec6      MOV R12, digitToDisp2	//Just put an appropriate number (that should be lit) in R12
-000277 cfeb      RJMP decode			//go to specific digit displaying
+0001e5 e002      LDI R16, 0b_0000_0010		//turn on PC1 (2nd digit)
+0001e6 bb05      OUT PORTC, R16
+0001e7 f1e6      	BRTS dispR			//if the number is incorrect, display the "r" letter ("Err-")
+0001e8 2ec6      MOV R12, digitToDisp2	//Just put an appropriate number (that should be lit) in R12
+0001e9 cfeb      RJMP decode			//go to specific digit displaying
                  
                  thirdDig:
-000278 e004      LDI R16, 0b_0000_0100		//turn on PC2 (3rd digit)
-000279 bb05      OUT PORTC, R16
-00027a f1be      	BRTS dispR			//if the number is incorrect, display the "r" letter ("Err-")
-00027b 2ec7      MOV R12, digitToDisp3	//Just put an appropriate number (that should be lit) in R12
-00027c cfe6      RJMP decode			//go to specific digit displaying
+0001ea e004      LDI R16, 0b_0000_0100		//turn on PC2 (3rd digit)
+0001eb bb05      OUT PORTC, R16
+0001ec f1be      	BRTS dispR			//if the number is incorrect, display the "r" letter ("Err-")
+0001ed 2ec7      MOV R12, digitToDisp3	//Just put an appropriate number (that should be lit) in R12
+0001ee cfe6      RJMP decode			//go to specific digit displaying
                  
                  fourthDig:
-00027d e008      LDI R16, 0b_0000_1000		//turn on PC3 (4th digit)
-00027e bb05      OUT PORTC, R16
-00027f f1ae      	BRTS dispDash			//if the number is incorrect, display dash ("Err-")
-000280 2ec4      MOV R12, digitToDisp4	//Just put an appropriate number (that should be lit) in R12
-000281 cfe1      RJMP decode			//go to specific digit displaying
+0001ef e008      LDI R16, 0b_0000_1000		//turn on PC3 (4th digit)
+0001f0 bb05      OUT PORTC, R16
+0001f1 f1ae      	BRTS dispDash			//if the number is incorrect, display dash ("Err-")
+0001f2 2ec4      MOV R12, digitToDisp4	//Just put an appropriate number (that should be lit) in R12
+0001f3 cfe1      RJMP decode			//go to specific digit displaying
                  ;--------------------------------------------------------------------------------------------
                  
                  disp0:
-000282 ec00      LDI R16, segind0	//displays 0...
-000283 bb0b      OUT PORTA, R16		//...on the LED indicator
-000284 cec6      RJMP Start		//Get back to the start
+0001f4 ec00      LDI R16, segind0	//displays 0...
+0001f5 bb0b      OUT PORTA, R16		//...on the LED indicator
+0001f6 cf15      RJMP Start		//Get back to the start
                  
                  disp1:
-000285 ef09      LDI R16, segind1	//displays 1...
-000286 bb0b      OUT PORTA, R16		//...on the LED indicator
-000287 cec3      RJMP Start		//Get back to the start
+0001f7 ef09      LDI R16, segind1	//displays 1...
+0001f8 bb0b      OUT PORTA, R16		//...on the LED indicator
+0001f9 cf12      RJMP Start		//Get back to the start
                  
                  disp2:
-000288 ea04      LDI R16, segind2	//displays 2...
-000289 bb0b      OUT PORTA, R16		//...on the LED indicator
-00028a cec0      RJMP Start		//Get back to the start
+0001fa ea04      LDI R16, segind2	//displays 2...
+0001fb bb0b      OUT PORTA, R16		//...on the LED indicator
+0001fc cf0f      RJMP Start		//Get back to the start
                  
                  disp3:
-00028b eb00      LDI R16, segind3	//displays 3...
-00028c bb0b      OUT PORTA, R16		//...on the LED indicator
-00028d cebd      RJMP Start		//Get back to the start
+0001fd eb00      LDI R16, segind3	//displays 3...
+0001fe bb0b      OUT PORTA, R16		//...on the LED indicator
+0001ff cf0c      RJMP Start		//Get back to the start
                  
                  disp4:
-00028e e909      LDI R16, segind4	//displays 4...
-00028f bb0b      OUT PORTA, R16		//...on the LED indicator
-000290 ceba      RJMP Start		//Get back to the start
+000200 e909      LDI R16, segind4	//displays 4...
+000201 bb0b      OUT PORTA, R16		//...on the LED indicator
+000202 cf09      RJMP Start		//Get back to the start
                  
                  disp5:
-000291 e902      LDI R16, segind5	//displays 5...
-000292 bb0b      OUT PORTA, R16		//...on the LED indicator
-000293 ceb7      RJMP Start		//Get back to the start
+000203 e902      LDI R16, segind5	//displays 5...
+000204 bb0b      OUT PORTA, R16		//...on the LED indicator
+000205 cf06      RJMP Start		//Get back to the start
                  
                  disp6:
-000294 e802      LDI R16, segind6	//displays 6...
-000295 bb0b      OUT PORTA, R16		//...on the LED indicator
-000296 ceb4      RJMP Start		//Get back to the start
+000206 e802      LDI R16, segind6	//displays 6...
+000207 bb0b      OUT PORTA, R16		//...on the LED indicator
+000208 cf03      RJMP Start		//Get back to the start
                  
                  disp7:
-000297 ef08      LDI R16, segind7	//displays 7...
-000298 bb0b      OUT PORTA, R16		//...on the LED indicator
-000299 ceb1      RJMP Start		//Get back to the start
+000209 ef08      LDI R16, segind7	//displays 7...
+00020a bb0b      OUT PORTA, R16		//...on the LED indicator
+00020b cf00      RJMP Start		//Get back to the start
                  
                  disp8:
-00029a e800      LDI R16, segind8	//displays 8...
-00029b bb0b      OUT PORTA, R16		//...on the LED indicator
-00029c ceae      RJMP Start		//Get back to the start
+00020c e800      LDI R16, segind8	//displays 8...
+00020d bb0b      OUT PORTA, R16		//...on the LED indicator
+00020e cefd      RJMP Start		//Get back to the start
                  
                  disp9:
-00029d e900      LDI R16, segind9	//displays 9...
-00029e bb0b      OUT PORTA, R16		//...on the LED indicator
-00029f ceab      RJMP Start		//Get back to the start
+00020f e900      LDI R16, segind9	//displays 9...
+000210 bb0b      OUT PORTA, R16		//...on the LED indicator
+000211 cefa      RJMP Start		//Get back to the start
                  
                  dispA:
-0002a0 e808      LDI R16, segindA	//displays A...
-0002a1 bb0b      OUT PORTA, R16		//...on the LED indicator
-0002a2 cea8      RJMP Start		//Get back to the start
+000212 e808      LDI R16, segindA	//displays A...
+000213 bb0b      OUT PORTA, R16		//...on the LED indicator
+000214 cef7      RJMP Start		//Get back to the start
                  
                  dispB:
-0002a3 e803      LDI R16, segindB	//displays B...
-0002a4 bb0b      OUT PORTA, R16		//...on the LED indicator
-0002a5 cea5      RJMP Start		//Get back to the start
+000215 e803      LDI R16, segindB	//displays B...
+000216 bb0b      OUT PORTA, R16		//...on the LED indicator
+000217 cef4      RJMP Start		//Get back to the start
                  
                  dispC:
-0002a6 ec06      LDI R16, segindC	//displays C...
-0002a7 bb0b      OUT PORTA, R16		//...on the LED indicator
-0002a8 cea2      RJMP Start		//Get back to the start
+000218 ec06      LDI R16, segindC	//displays C...
+000219 bb0b      OUT PORTA, R16		//...on the LED indicator
+00021a cef1      RJMP Start		//Get back to the start
                  
                  dispD:
-0002a9 ea01      LDI R16, segindD	//displays D...
-0002aa bb0b      OUT PORTA, R16		//...on the LED indicator
-0002ab ce9f      RJMP Start		//Get back to the start
+00021b ea01      LDI R16, segindD	//displays D...
+00021c bb0b      OUT PORTA, R16		//...on the LED indicator
+00021d ceee      RJMP Start		//Get back to the start
                  
                  dispE:
-0002ac e806      LDI R16, segindE	//displays E...
-0002ad bb0b      OUT PORTA, R16		//...on the LED indicator
-0002ae ce9c      RJMP Start		//Get back to the start
+00021e e806      LDI R16, segindE	//displays E...
+00021f bb0b      OUT PORTA, R16		//...on the LED indicator
+000220 ceeb      RJMP Start		//Get back to the start
                  
                  dispF:
-0002af e80e      LDI R16, segindF	//displays F...
-0002b0 bb0b      OUT PORTA, R16		//...on the LED indicator
-0002b1 ce99      RJMP Start		//Get back to the start
+000221 e80e      LDI R16, segindF	//displays F...
+000222 bb0b      OUT PORTA, R16		//...on the LED indicator
+000223 cee8      RJMP Start		//Get back to the start
                  
                  ;---
                  
                  dispR:
-0002b2 ea0f      LDI R16, segindR	//displays R...
-0002b3 bb0b      OUT PORTA, R16		//...on the LED indicator
-0002b4 ce96      RJMP Start		//Get back to the start
+000224 ea0f      LDI R16, segindR	//displays R...
+000225 bb0b      OUT PORTA, R16		//...on the LED indicator
+000226 cee5      RJMP Start		//Get back to the start
                  
                  ;---
                  
                  dispDash:
-0002b5 eb0f      LDI R16, segindDash	//displays "-"...
-0002b6 bb0b      OUT PORTA, R16		//...on the LED indicator
-0002b7 ce93      RJMP Start		//Get back to the start
+000227 eb0f      LDI R16, segindDash	//displays "-"...
+000228 bb0b      OUT PORTA, R16		//...on the LED indicator
+000229 cee2      RJMP Start		//Get back to the start
 
 
 RESOURCE USE INFORMATION
@@ -2537,39 +2632,39 @@ counted separately from r26..r31 here.
 .dseg memory usage only counts static data declared with .byte
 
 "ATmega64A" register use summary:
-x  :   1 y  :  11 z  :   9 r0 :   0 r1 :   0 r2 :   0 r3 :   0 r4 :   0 
-r5 :   0 r6 :   0 r7 :   0 r8 :   0 r9 :   0 r10:   0 r11:   3 r12:   6 
-r13:   4 r14:   2 r15:   2 r16: 232 r17:   7 r18:  48 r19:  27 r20:   4 
-r21:   4 r22:   4 r23:   4 r24:   3 r25:   3 r26:   4 r27:   4 r28:  48 
-r29:  52 r30:  16 r31:  14 
-Registers used: 24 out of 35 (68.6%)
+x  :   1 y  :   8 z  :   8 r0 :   0 r1 :   0 r2 :   0 r3 :   0 r4 :   0 
+r5 :   0 r6 :   0 r7 :   0 r8 :   0 r9 :   0 r10:   0 r11:   0 r12:   6 
+r13:   4 r14:   2 r15:   2 r16: 177 r17:   7 r18:  26 r19:  12 r20:   4 
+r21:   4 r22:   4 r23:   4 r24:   3 r25:   3 r26:   4 r27:   4 r28:  38 
+r29:  42 r30:  12 r31:  12 
+Registers used: 23 out of 35 (65.7%)
 
 "ATmega64A" instruction use summary:
-.lds  :   0 .sts  :   0 adc   :   8 add   :   9 adiw  :   4 and   :   0 
-andi  :  17 asr   :   0 bclr  :   0 bld   :   0 brbc  :   0 brbs  :   0 
-brcc  :   0 brcs  :   0 break :   0 breq  :   9 brge  :   2 brhc  :   0 
-brhs  :   0 brid  :   0 brie  :   0 brlo  :  13 brlt  :   0 brmi  :   0 
-brne  :  12 brpl  :   4 brsh  :   0 brtc  :   0 brts  :   4 brvc  :   0 
+.lds  :   0 .sts  :   0 adc   :   4 add   :   5 adiw  :   4 and   :   0 
+andi  :   9 asr   :   0 bclr  :   0 bld   :   0 brbc  :   0 brbs  :   0 
+brcc  :   0 brcs  :   0 break :   0 breq  :   6 brge  :   1 brhc  :   0 
+brhs  :   0 brid  :   0 brie  :   0 brlo  :  10 brlt  :   0 brmi  :   0 
+brne  :  15 brpl  :   4 brsh  :   0 brtc  :   0 brts  :   4 brvc  :   0 
 brvs  :   0 bset  :   0 bst   :   0 call  :   0 cbi   :   0 cbr   :   0 
-clc   :   0 clh   :   0 cli   :   1 cln   :   0 clr   :  18 cls   :   0 
-clt   :   1 clv   :   0 clz   :   0 com   :   0 cp    :   9 cpc   :   2 
-cpi   :  28 cpse  :   0 dec   :   1 eor   :   0 fmul  :   0 fmuls :   0 
-fmulsu:   0 icall :   0 ijmp  :   1 in    :   9 inc   :   8 jmp   :   4 
-ld    :  11 ldd   :   0 ldi   :  87 lds   :  31 lpm   :   5 lsl   :   1 
-lsr   :   8 mov   :  25 movw  :   2 mul   :   0 muls  :   0 mulsu :   0 
-neg   :   0 nop   :   0 or    :   0 ori   :  13 out   :  40 pop   :  19 
-push  :  19 rcall :   5 ret   :   2 reti  :  34 rjmp  :  41 rol   :   0 
-ror   :   0 sbc   :   0 sbci  :   0 sbi   :   0 sbic  :   0 sbis  :   0 
-sbiw  :   0 sbr   :   0 sbrc  :  11 sbrs  :   3 sec   :   0 seh   :   0 
+clc   :   0 clh   :   0 cli   :   1 cln   :   0 clr   :  11 cls   :   0 
+clt   :   1 clv   :   0 clz   :   0 com   :   0 cp    :   5 cpc   :   2 
+cpi   :  30 cpse  :   0 dec   :   1 eor   :   0 fmul  :   0 fmuls :   0 
+fmulsu:   0 icall :   0 ijmp  :   1 in    :   6 inc   :   5 jmp   :   4 
+ld    :   9 ldd   :   0 ldi   :  74 lds   :  19 lpm   :   3 lsl   :   1 
+lsr   :   8 mov   :  20 movw  :   2 mul   :   0 muls  :   0 mulsu :   0 
+neg   :   0 nop   :   0 or    :   0 ori   :   6 out   :  36 pop   :  14 
+push  :  14 rcall :   4 ret   :   2 reti  :  35 rjmp  :  35 rol   :   0 
+ror   :   0 sbc   :   0 sbci  :   0 sbi   :   0 sbic  :   0 sbis  :   1 
+sbiw  :   0 sbr   :   0 sbrc  :   6 sbrs  :   3 sec   :   0 seh   :   0 
 sei   :   2 sen   :   0 ser   :   0 ses   :   0 set   :   9 sev   :   0 
-sez   :   0 sleep :   0 spm   :   0 st    :   7 std   :   0 sts   :  32 
+sez   :   0 sleep :   0 spm   :   0 st    :   6 std   :   0 sts   :  19 
 sub   :   0 subi  :   3 swap  :   0 tst   :   0 wdr   :   0 
-Instructions used: 44 out of 113 (38.9%)
+Instructions used: 45 out of 113 (39.8%)
 
 "ATmega64A" memory use summary [bytes]:
 Segment   Begin    End      Code   Data   Used    Size   Use%
 ---------------------------------------------------------------
-[.cseg] 0x000000 0x000570   1278     44   1322   65536   2.0%
+[.cseg] 0x000000 0x000454   1002     36   1038   65536   1.6%
 [.dseg] 0x000100 0x00012f      0     47     47    4096   1.1%
 [.eseg] 0x000000 0x000000      0      0      0    2048   0.0%
 
