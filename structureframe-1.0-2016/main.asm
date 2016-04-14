@@ -26,10 +26,11 @@
 
 .equ presetLow = 0x39	//Here we can set a desired period of time for a precise delay (2 bytes long)
 .equ presetHigh = 0x01	//on 16 MHz and with no prescaler, there is approx. 62500 (0xF424) overflows per second (for 8-bit timer)
+						//and 0x7A12 on 8 MHz
 //150 Hz (0x01A1) works well for the LED indicator
 //200 Hz (0x0139) for the green 4-digit indicator
-.equ owfPerSecond8BitLow = 0x24
-.equ owfPerSecond8BitHigh = 0xF4 //supra
+.equ owfPerSecond8BitLow = 0x12
+.equ owfPerSecond8BitHigh = 0x7A //supra
 
 //symbolic custom registers names
 .def digitToDisp1 = R21			//1st digit to be displayed on the LED. Only hexadecimal digits are defined!
@@ -418,7 +419,7 @@ decAddrTable: .dw disp0, disp1, disp2, disp3, disp4, \
 		disp5, disp6, disp7, disp8, disp9, \
 		dispA, dispB, dispC, dispD, dispE, dispF, \
 		dispR, dispDash	//Adresses of the labels, stored in a certain place (decAddrTable) in program memory
-spiDataSequence: .db 0x69, 0x00, 0x69, 0x64, 0x00, 0x64, 0x69, 0x00
+spiDataSequence: .db 0xFF, 0x50, 0x53, 0x08, 0x00, 0x00, 0x00, 0x00
 //					AE		FF		00		FF		66		FF		00		FF
 //0xFF, 0x50, 0x53, 0x08, 0x00, 0x00, 0x00, 0x00
 //NOP, select bank1, read register 8, spam zero 4 times to shift data out
@@ -455,10 +456,11 @@ LDI R16, High(RAMEND)
 OUT SPH, R16
 
 //USART1 Initialization
-; Set baud rate
+; Set baud rate (f osc = 16 MHz)
 ; 2400 baud -> 0x01A0
 ; 9600 baud -> 0x0067
 ; 1Mbaud -> 0x0000
+; For 8 MHz, to achieve the same speed grades, U2X bit should be enabled
 LDI R16, 0x00
 UOUT UBRR1H, R16
 LDI R16, 0x00
@@ -472,7 +474,7 @@ UOUT UBRR1L, R16
 ; 2 - (UPE1) USART Parity Error (must be set to 0)	(r/o)
 ; 1 - (U2X1) Double the USART Transmission Speed
 ; 0 - (MPCM1) Multi-Processor Communication Mode
-LDI R16, 0b_0100_0000
+LDI R16, 0b_0100_0010
 UOUT UCSR1A, R16
 
 ; 7 - (RXCIE1) RX Complete Interrupt Enable
@@ -748,7 +750,7 @@ exitMOSIRoutineTrue:
 
 //------============--------------===============--------------
 
-SBRS flagStorage, timeToRefresh			//7-segment digits output routine
+//SBRS flagStorage, timeToRefresh			//7-segment digits output routine
 RJMP notATimeToRefresh					//If the flag isn't set then skip
 
 	ANDI flagStorage, ~(1<<timeToRefresh)	//CBR wont work or I am stupid -_- clear the flag
