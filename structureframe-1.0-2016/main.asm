@@ -24,13 +24,13 @@
 
 .equ segindR = 0b_1010_1111		//"r"
 
-.equ presetLow = 0x39	//Here we can set a desired period of time for a precise delay (2 bytes long)
-.equ presetHigh = 0x01	//on 16 MHz and with no prescaler, there is approx. 62500 (0xF424) overflows per second (for 8-bit timer)
+.equ presetLow = 0x9C	//Here we can set a desired period of time for a precise delay (2 bytes long)
+.equ presetHigh = 0x00	//on 16 MHz and with no prescaler, there is approx. 62500 (0xF424) overflows per second (for 8-bit timer)
 						//and 0x7A12 on 8 MHz
 //150 Hz (0x01A1) works well for the red LED indicator
-//200 Hz (0x0139) for the green 4-digit indicator
-.equ owfPerSecond8BitLow = 0x24
-.equ owfPerSecond8BitHigh = 0xF4 //supra
+//200 Hz (0x0139) for the green 4-digit indicator (0x009C for 8 MHz)
+.equ owfPerSecond8BitLow = 0x12
+.equ owfPerSecond8BitHigh = 0x7A //supra
 
 //Symbolic custom registers names
 .def digitToDisp1 = R21			//1st digit to be displayed on the LED. Only hexadecimal digits are defined!
@@ -42,14 +42,26 @@
 
 .def flagStorage = R19			//Custom flags storage
 							//And custom symbolic bit names, why not
-.equ achtung =						0	//USART: new data received
-.equ transmit =						1	//USART: a command sequence is recognized
-.equ timeToRefresh =				2	//LED digits should be refreshed
-.equ uartTXBufferOverflow =			3
-.equ spiMOSIBufferOverflow =		4
-.equ spiMISOBufferOverflow =		5
-.equ spiTransferComplete =			6	//Set in SPI interrupt routine
-;.equ spiAllDataSent =				7
+.equ achtung				=		0	//USART: new data received
+.equ spiPacketReady			=		1
+.equ timeToRefresh			=		2	//LED digits should be refreshed
+.equ uartTXBufferOverflow	=		3
+.equ spiMOSIBufferOverflow	=		4
+.equ spiMISOBufferOverflow	=		5
+.equ spiTransferComplete	=		6	//Set in SPI interrupt routine
+.equ spiDataReady			=		7
+
+.equ wRegisterCommand		=		0
+.equ rRegisterCommand		=		1
+.equ wPayloadCommand		=		2
+.equ wAckPlCommand			=		3
+.equ rPayloadCommand		=		4
+.equ rPlWidthCommand		=		5
+.equ rwRegCommArgument		=		6
+.equ wAckPlCommArgument		=		7
+
+.equ activateCommand		=		0
+.equ otherCommand			=		1
 
 .equ control1 = 0x61			//"a"
 .equ control2 = 0x77			//"w"
@@ -58,8 +70,8 @@
 .equ uartRAMStorageRXLength = 8	//well, a length of storage in RAM, dedicated for saving UART's received bytes
 .equ uartRAMStorageTXLength = 8	//same for bytes to transmit (255 bytes maximum!)
 
-.equ spiRAMStorageMISOLength = 8	//a length of storage in RAM, dedicated for saving SPI's received bytes (255 bytes maximum!)
-.equ spiRAMStorageMOSILength = 8	//same for bytes to transmit through SPI (255 bytes maximum!)
+.equ spiRAMStorageMISOLength = 34	//a length of storage in RAM, dedicated for saving SPI's received bytes (255 bytes maximum!)
+.equ spiRAMStorageMOSILength = 34	//same for bytes to transmit through SPI (255 bytes maximum!)
 
 ;--------------------------------------------------------------------------------------------
 ;Macro definitions
@@ -117,6 +129,15 @@ subrWriteLabel:		.BYTE 2
 subrSource:			.BYTE 1
 subrLength:			.BYTE 1
 
+nrfCommand:			.BYTE 1
+nrfRegMapAddress:	.BYTE 1
+nrfPayloadWidth:	.BYTE 1
+nrfRegInfo:			.BYTE 5
+nrfPayload:			.BYTE 32
+nrfCommRecogFlags:	.BYTE 1
+nrfCommRecogExt:	.BYTE 1
+nrfPlCnt:			.BYTE 1		//Probably having two counters is excessive
+nrfRegDataCnt:		.BYTE 1		//Probably having two counters is excessive
 ;--------------------------------------------------------------------------------------------
 .CSEG
 //Reset and Interrupt Vectors table
@@ -420,7 +441,20 @@ decAddrTable: .dw disp0, disp1, disp2, disp3, disp4, \
 		disp5, disp6, disp7, disp8, disp9, \
 		dispA, dispB, dispC, dispD, dispE, dispF, \
 		dispR, dispDash	//Adresses of the labels, stored in a certain place (decAddrTable) in program memory
-spiDataSequence: .db 0x00, 0x00, 0x69, 0x64, 0x69, 0x00, 0x69, 0x64
+
+spiDataSequence: .db 0xFF, 0x50, 0x53, 0x08, 0x00, 0x00, 0x00, 0x00
+
+commandWordsList: .db	0b_0000_0000,	0b_0010_0000,	0b_0110_0001,	0b_1010_0000, \
+						0b_1110_0001,	0b_1110_0010,	0b_1110_0011,	0b_0101_0000, \
+						0b_0110_0000,	0b_1010_1000,	0b_1011_0000,	0b_1111_1111
+
+					//	R_REGISTER,		W_REGISTER,		R_RX_PAYLOAD,		W_TX_PAYLOAD,
+					//	FLUSH_TX,		FLUSH_RX,		REUSE_TX_PL,		ACTIVATE,
+					//	R_RX_PL_WID,	W_ACK_PAYLOAD,	W_TX_PAYLOAD_NOACK,	NOP
+
+					//	(a	0x61)		(b	0x62)		(c	0x63)			(d	0x64)
+					//	(e	0x65)		(f	0x66)		(g	0x67)			(h	0x68)
+					//	(i	0x69)		(j	0x6A)		(k	0x6B)			(l	0x6C)
 
 //0xFF, 0x50, 0x53, 0x08, 0x00, 0x00, 0x00, 0x00
 //NOP, select bank1, read register 8, spam zero 4 times to shift data out
@@ -464,6 +498,7 @@ OUT SPH, R16
 // 9600 baud -> 0x0067
 // 1Mbaud -> 0x0000
 // For 8 MHz, to achieve the same speed grades, U2X bit should be enabled
+
 LDI R16, 0x00
 UOUT UBRR1H, R16
 LDI R16, 0x00
@@ -521,10 +556,10 @@ OUT TIMSK, R16			//set TOIE0 in TIMSK register
 
 IN R16, DDRB
 ORI R16, (1<<DDB0 | 1<<DDB1 | 1<<DDB2)		//Set 1's in PortB Direction Register
-OUT DDRB, R16								//MOSI, SCK and SS are configured as master
+OUT DDRB, R16								//MOSI, SCK and SS are configured as outputs
 
 IN R16, PORTB
-ANDI R16, ~(1<<PORTB0)	//SS output set to zero (active low)
+ORI R16, (1<<PORTB0)	//SS output set to one (active low)
 OUT PORTB, R16
 
 //SPCR - SPI Control Register
@@ -565,7 +600,13 @@ LDI XH, high(uartRX)	//...used for store last 8 bytes from USART1
 
 CLT						//clear T flag which means "incorrect number to display"
 
-LDI R16, 0x00			//clear R16 for the order's sake
+LDI R16, 31
+STS nrfPlCnt, R16
+
+LDI R16, 4
+STS nrfRegDataCnt, R16
+
+CLR R16			//clear R16 for the order's sake
 
 SEI			//interrupts enabled globally
 
@@ -573,7 +614,8 @@ SEI			//interrupts enabled globally
 //Main Routine//
 Start:
 
-// Command recognition
+// A newly received byte handling
+SBRS flagStorage, spiDataReady
 SBRS flagStorage, achtung	//Skip next instruction is there is ACHTUNG!
 RJMP noNewDataUART				//bypass
 
@@ -583,27 +625,254 @@ RJMP noNewDataUART				//bypass
 
 	RCALL compareYAndRXStorageStart
 
-	LD R16, -Y						//look into SRAM, last 3 written bytes deep
+	LD R16, -Y
+	
+	LDS R18, nrfCommRecogFlags
+	ANDI R18, (1<<wPayloadCommand | 1<<wAckPlCommand)
+	CPI R18, (1<<wPayloadCommand)
+	BREQ getPayload
+	CPI R18, (1<<wAckPlCommand)
+	BREQ getPayload
+	RJMP keepRecog1
+	
+		getPayload:
+		LDI YL, low(nrfPayload)
+		LDI YH, high(nrfPayload)
+		LDS R18, nrfPlCnt
+		ADD YL, R18
+		CLR R18
+		ADC YH, R18
+		ST Y, R16
+
+		LDS R18, nrfPlCnt
+		DEC R18
+		BRPL skipSavePl1
+			LDI R18, 31
+			ORI flagStorage, (1<<spiDataReady)
+		skipSavePl1:
+		STS nrfPlCnt, R18
+		RJMP noNewDataUART							//next payload byte is received and stored
+
+	keepRecog1:
+
+	LDS R18, nrfCommRecogFlags
+	SBRS R18, wRegisterCommand
+	RJMP keepRecog2
+
+		LDS R18, nrfRegMapAddress
+		CPI R18, 0x0A
+			BREQ longRegister
+		CPI R18, 0x0B
+			BREQ longRegister
+		CPI R18, 0x10
+			BREQ longRegister
+		RJMP shortRegister
+			
+			longRegister:
+			LDI YL, low(nrfRegInfo)
+			LDI YH, high(nrfRegInfo)
+			LDS R18, nrfRegDataCnt
+			ADD YL, R18
+			CLR R18
+			ADC YH, R18
+
+			ST Y, R16
+
+			LDS R18, nrfRegDataCnt
+			DEC R18
+			BRPL skipSaveReg1
+				LDI R18, 4
+				ORI flagStorage, (1<<spiDataReady)
+			skipSaveReg1:
+			STS nrfRegDataCnt, R18
+			RJMP noNewDataUART							//next register's content byte is received and stored (5 bytes register)
+		
+		shortRegister:
+		STS nrfRegInfo, R16
+		ORI flagStorage, (1<<spiDataReady)
+		RJMP noNewDataUART								////next register's content byte is received and stored (1 byte register)
+
+	keepRecog2:
+
+	LDS R18, nrfCommRecogFlags
+	SBRS R18, wAckPlCommArgument
+	RJMP keepRecog3
+		
+		SUBI R16, 0x31
+		BRCS invalidPipeNo
+		CPI R16, 0x06
+		BRGE invalidPipeNo
+
+		LDS R18, nrfCommand
+		ADD R18, R16
+		STS nrfCommand, R18
+
+		LDS R16, nrfCommRecogFlags
+		ANDI R16, ~(1<<wAckPlCommArgument)
+		ORI R16, (1<<wAckPlCommand)
+		STS nrfCommRecogFlags, R16
+		RJMP noNewDataUART								//W_ACK_PAYLOAD command's argument (pipe no.) is receiver and added to command word
+
+		invalidPipeNo:
+		LDS R16, nrfCommRecogFlags
+		ANDI R16, ~(1<<wAckPlCommArgument)
+		STS nrfCommRecogFlags, R16
+		RJMP noNewDataUART
+
+	keepRecog3:
+
+	LDS R18, nrfCommRecogFlags
+	SBRS R18, rwRegCommArgument
+	RJMP keepRecog4
+		
+		SUBI R16, 0x40
+		BRCS invalidRegAddr
+		CPI R16, 0x20
+		BRGE invalidRegAddr
+
+		LDS R18, nrfCommand
+		ADD R18, R16
+		STS nrfCommand, R18
+		STS nrfRegMapAddress, R16
+
+		LDS R16, nrfCommRecogFlags
+
+		SBRS R18, 5
+			RJMP rRegLabel
+		ORI R16, (1<<wRegisterCommand)
+return:	ANDI R16, ~(1<<rwRegCommArgument)
+
+		STS nrfCommRecogFlags, R16
+
+		RJMP noNewDataUART								//R(W)_REGISTER command's argument (reg. address) is receiver and added to command word
+
+			rRegLabel:
+			ORI R16, (1<<rRegisterCommand)
+			ORI flagStorage, (1<<spiDataReady)
+			RJMP return
+
+		invalidRegAddr:
+		LDS R16, nrfCommRecogFlags
+		ANDI R16, ~(1<<rwRegCommArgument)
+		STS nrfCommRecogFlags, R16
+		RJMP noNewDataUART
+
+	keepRecog4:
+	
+	// [x]wk word recognition
 	CPI R16, control3
-	BRNE noNewDataUART		//Branch if not equal to last, 3rd byte of the control sequence
+	BREQ correct3rdSymbol		//Branch if not equal to last, 3rd byte of the control sequence
+	RJMP noNewDataUART
+
+		correct3rdSymbol:
 
 		RCALL compareYAndRXStorageStart
 
 		LD R16, -Y
 		CPI R16, control2
-		BRNE noNewDataUART				//Branch if last two received bytes not equal to 3rd and 2nd control sequence bytes
+		
+		BREQ correct2ndSymbol				//Branch if last two received bytes not equal to 3rd and 2nd control sequence bytes
+		RJMP noNewDataUART
 
-			RCALL compareYAndRXStorageStart
+	correct2ndSymbol:
 
-			LD R16, -Y
-			CPI R16, control1
-			BRNE noNewDataUART			//Branch if last 3 received bytes not equal to 3rd, 2nd and 1st control sequence bytes
+	RCALL compareYAndRXStorageStart
 
-	ORI flagStorage, (1<<transmit)		//Else set TRANSMIT status if proper control sequence is received
+	LD R16, -Y
+	
+	CPI R16, 0x61
+		BRGE correctCommand
+	CPI R16, 0x6D
+		BRLO correctCommand
+	RJMP noNewDataUART
 
+		correctCommand:
+
+	SUBI R16, 0x61
+
+	LDI ZL, low(commandWordsList*2)
+	LDI ZH, high(commandWordsList*2)
+	ADD ZL, R16
+	CLR R16
+	ADC ZH, R16
+
+	LPM	R16, Z
+	STS nrfCommand, R16
+
+	ROL R16
+	BRCS parsing1
+	BRCC parsing0
+		
+		parsing1:
+		ROL R16
+		BRCS parsing11
+		BRCC parsing10
+
+		parsing0:
+		ROL R16
+		BRCS parsing01
+		BRCC parsing00
+
+			parsing11:
+			LDS R18, nrfCommRecogExt
+			ORI R18, (1<<otherCommand)
+			STS nrfCommRecogExt, R18
+			ORI flagStorage, (1<<spiDataReady)
+			RJMP noNewDataUART
+
+				parsedTxPayload:
+				LDS R18, nrfCommRecogFlags
+				ORI R18, (1<<wPayloadCommand)
+				STS nrfCommRecogFlags, R18
+				RJMP noNewDataUART
+
+			parsing10:
+			SBRS R16, 5
+			RJMP parsedTxPayload
+				LDS R18, nrfCommRecogFlags
+				ORI R18, (1<<wAckPlCommArgument)
+				STS nrfCommRecogFlags, R18
+				RJMP noNewDataUART
+
+				parsedActivate:
+				LDS R18, nrfCommRecogExt
+				ORI R18, (1<<activateCommand)
+				STS nrfCommRecogExt, R18
+				ORI flagStorage, (1<<spiDataReady)
+				RJMP noNewDataUART
+
+				parsedRRXPlWidth:
+				LDS R18, nrfCommRecogFlags
+				ORI R18, (1<<rPlWidthCommand)
+				STS nrfCommRecogFlags, R18
+				ORI flagStorage, (1<<spiDataReady)
+				RJMP noNewDataUART
+
+				parsedRRXPayload:
+				LDS R18, nrfCommRecogFlags
+				ORI R18, (1<<rPayloadCommand)
+				STS nrfCommRecogFlags, R18
+				ORI flagStorage, (1<<spiDataReady)
+				RJMP noNewDataUART
+
+			parsing01:
+			LDS R16, nrfCommand
+			CPI R16, 0b_0101_0000
+			BREQ parsedActivate
+			CPI R16, 0b_0110_0000
+			BREQ parsedRRXPlWidth
+			CPI R16, 0b_0110_0001
+			BREQ parsedRRXPayload
+			
+			parsing00:
+			LDS R18, nrfCommRecogFlags
+			ORI R18, (1<<rwRegCommArgument)
+			STS nrfCommRecogFlags, R18
+			RJMP noNewDataUART
+		
 noNewDataUART:
 
-// End of command recognition algorithm
+// End of byte handling
 
 ;-------------------------------------
 
@@ -678,28 +947,16 @@ nothingToSendUART:
 
 ;-------------------------------------
 
-// Send data to SPI MOSI buffer
+// SPI packet forming
 
-SBRS flagStorage, transmit		//If the flag isn't set then skip
-RJMP nothingToSendSPI			//Waiting for a command over UART
+SBRS flagStorage, spiDataReady	//If the flag isn't set then skip
+RJMP nothingToSendSPI			
 
 SBRC flagStorage, spiMOSIBufferOverflow		//If the output buffer is overflowed then skip
 RJMP nothingToSendSPI
 
-	MOV R16, R11						//Get a special pointer stored in R11
-	LDI ZL, Low(spiDataSequence*2)		//Get a label of the data, hardcoded in flash
-	LDI ZH, High(spiDataSequence*2)		//Compiler interpretes flash addresses as 2-byte words, so we need to double every address
-
-	ADD ZL, R16
-	CLR R16
-	ADC ZH, R16		//Add the pointer to the address
-
-	LPM R16, Z		//Load (from Program Memory) a content of the cell Z points to
-
-	STS subrSource, R16				//Fill all the requisites for SPI MOSI buffer
-
 	LDI R16, low(spiMOSI)
-		STS subrStartLabel, R16
+		STS subrStartLabel, R16		//Fill all the requisites for SPI MOSI buffer
 	LDI R16, high(spiMOSI)
 		STS (subrStartLabel+1), R16
 	LDI R16, low(spiMOSIWrite)
@@ -713,22 +970,182 @@ RJMP nothingToSendSPI
 	LDI R16, spiRAMStorageMOSILength
 		STS subrLength, R16
 
-	RCALL storeToRAMBuffer			//Call the subroutine to send next byte in SPI MOSI buffer
+	LDS R16, nrfCommand
+	STS subrSource, R16
 
-	LDS R16, subrSource	//Overflow check
-	SBRC R16, 5			//no matter which bit will be tested: in case of overflow the byte equals 0xFF
-	ORI flagStorage, (1<<spiMOSIBufferOverflow)	//Set the following overflow flag
-	
-	MOV R16, R11		//Get the pointer again
-	INC R16				//Increment it
-	LDI ZL, 7		//We have 8 bytes long sequency
-	CP ZL, R16			//Compare the pointer with the sequency length
-	BRGE spiMOSISkipLabel1
-		CLR R16			//Clear the pointer, if needed
-		ANDI flagStorage, ~(1<<transmit)	//If the pointer == the length, then all data is shifted out
+	RCALL storeToRAMBuffer			//Call the subroutine to send a byte in SPI MOSI buffer
 
-	spiMOSISkipLabel1:
-	MOV R11, R16		//Store the pointer back
+	LDS R18, nrfCommRecogExt
+	SBRS R18, otherCommand
+	RJMP noOther
+
+		ANDI flagStorage, ~(1<<spiDataReady)
+		ORI flagStorage, (1<<spiPacketReady)
+		ANDI R18, ~(1<<otherCommand)
+		STS nrfCommRecogExt, R18
+		RJMP endPacketForming
+		
+	noOther:
+	SBRS R18, activateCommand
+	RJMP noActivate
+
+		LDI R16, 0x73
+		STS subrSource, R16
+		RCALL storeToRAMBuffer
+		ANDI flagStorage, ~(1<<spiDataReady)
+		ORI flagStorage, (1<<spiPacketReady)
+		ANDI R18, ~(1<<activateCommand)
+		STS nrfCommRecogExt, R18
+		RJMP endPacketForming
+
+	noActivate:
+	LDS R18, nrfCommRecogFlags
+	SBRS R18, rPlWidthCommand
+	RJMP noReadPayloadWidth
+
+		LDI R16, 0xFF
+		STS subrSource, R16
+		RCALL storeToRAMBuffer
+		ANDI flagStorage, ~(1<<spiDataReady)
+		ORI flagStorage, (1<<spiPacketReady)
+		ANDI R18, ~(1<<rPlWidthCommand)
+		STS nrfCommRecogFlags, R18
+		RJMP endPacketForming
+
+	noReadPayloadWidth:
+	ANDI R18, (1<<wPayloadCommand | 1<<wAckPlCommand | rPayloadCommand)
+	CPI R18, (1<<wPayloadCommand)
+	BREQ writePayload
+	CPI R18, (1<<wAckPlCommand)
+	BREQ writePayload
+	CPI R18, (1<<rPayloadCommand)
+	BREQ writePayload
+	RJMP noWritePayload
+
+		writePayload:
+
+		LDS R16, spiMOSIWrite
+		LDI ZL, low(nrfPayload)
+		LDI ZH, high(nrfPayload)
+
+		
+stLab:	LDI YL, low(spiMOSI)
+		LDI YH, high(spiMOSI)
+		
+		ADD YL, R16
+		CLR R18
+		ADC YH, R18
+		
+		LD R18, Z+
+		ST Y, R18
+
+		INC R16
+
+		CPI R16, spiRAMStorageMOSILength			//If write pointer reached the end of the buffer...
+		BRLO spiPacketSkip1
+			CLR	R16				//...then reset it
+		spiPacketSkip1:
+
+		LDS R18, spiMOSIRead
+		CPSE R16, R18				//Compare the pointers
+		RJMP setSk
+		SET
+setSk:	CPI ZL, low(nrfPayload+32)
+		LDI R18, high(nrfPayload+32)
+		CPC ZH, R18
+		BRLO stLab
+
+		STS spiMOSIWrite, R16
+
+		ANDI flagStorage, ~(1<<spiDataReady)
+		ORI flagStorage, (1<<spiPacketReady)
+
+		LDS R18, nrfCommRecogFlags
+		ANDI R18, ~(1<<wPayloadCommand | 1<<wAckPlCommand | 1<<rPayloadCommand)
+		STS nrfCommRecogFlags, R18
+		RJMP endPacketForming
+		
+	noWritePayload:
+	LDS R18, nrfCommRecogFlags
+	ANDI R18, (1<<wRegisterCommand | 1<<rRegisterCommand)
+	CPI R18, (1<<wRegisterCommand)
+	BREQ writeRegister
+	CPI R18, (1<<rRegisterCommand)
+	BREQ writeRegister
+	RJMP noWriteRegister
+
+		writeRegister:
+		LDS R18, nrfRegMapAddress
+		CPI R18, 0x0A
+			BREQ writeLongRegister
+		CPI R18, 0x0B
+			BREQ writeLongRegister
+		CPI R18, 0x10
+			BREQ writeLongRegister
+		RJMP writeShortRegister
+			
+			writeLongRegister:
+			LDS R16, spiMOSIWrite
+			LDI ZL, low(nrfRegInfo)
+			LDI ZH, high(nrfRegInfo)
+
+		
+stLab2:		LDI YL, low(spiMOSI)
+			LDI YH, high(spiMOSI)
+		
+			ADD YL, R16
+			CLR R18
+			ADC YH, R18
+		
+			LD R18, Z+
+			ST Y, R18
+
+			INC R16
+
+			CPI R16, spiRAMStorageMOSILength			//If write pointer reached the end of the buffer...
+			BRLO spiPacketSkip2
+				CLR	R16				//...then reset it
+			spiPacketSkip2:
+
+			LDS R18, spiMOSIRead
+			CPSE R16, R18				//Compare the pointers
+			RJMP setSk2
+			SET
+setSk2:		CPI ZL, low(nrfRegInfo+5)
+			LDI R18, high(nrfRegInfo+5)
+			CPC ZH, R18
+			BRLO stLab2
+
+			STS spiMOSIWrite, R16
+
+			ANDI flagStorage, ~(1<<spiDataReady)
+			ORI flagStorage, (1<<spiPacketReady)
+
+			LDS R18, nrfCommRecogFlags
+			ANDI R18, ~(1<<wRegisterCommand | 1<<rRegisterCommand)
+			STS nrfCommRecogFlags, R18
+			RJMP endPacketForming
+
+		writeShortRegister:
+		LDS R16, nrfRegInfo
+		STS subrSource, R16
+		RCALL storeToRAMBuffer
+
+		ANDI flagStorage, ~(1<<spiDataReady)
+		ORI flagStorage, (1<<spiPacketReady)
+
+		LDS R18, nrfCommRecogFlags
+		ANDI R18, ~(1<<wRegisterCommand | 1<<rRegisterCommand)
+		STS nrfCommRecogFlags, R18
+		RJMP endPacketForming
+
+	noWriteRegister:
+	RJMP nothingToSendSPI
+
+	endPacketForming:
+	IN R16, PORTB
+	ANDI R16, ~(1<<PORTB0)	//SS output set to zero (active low)
+	OUT PORTB, R16
 
 nothingToSendSPI:
 
@@ -738,7 +1155,12 @@ nothingToSendSPI:
 
 //SPI data transmission
 
+SBRS flagStorage, spiPacketReady
+RJMP exitMOSIRoutineTrue
+
 LDS R16, spiMOSIRead		//Get the read and write pointers
+
+spiSendCycle:
 LDS R18, spiMOSIWrite
 
 SBRC flagStorage, spiMOSIBufferOverflow		//If MOSI buffer is overflowed then go to transmission immediately
@@ -748,15 +1170,18 @@ CP R16, R18					//Compare MOSI buffer pointers
 BRNE unreadDataSPI			//If not equal, then there is some pending data, go to transmission
 
 	//Buffer is empty
-//	ORI flagStorage, (1<<spiAllDataSent) //we just shifted out all pending data
+	//we just shifted out all pending data
+STS spiMOSIRead, R16	//Store the read pointer
+IN R16, PORTB
+ORI R16, (1<<PORTB0)	//SS output set to one (active low)
+OUT PORTB, R16
+ANDI flagStorage, ~(1<<spiPacketReady)
 RJMP exitMOSIRoutineTrue
 
 	unreadDataSPI:
 
-//	ANDI flagStorage, ~(1<<spiAllDataSent)	//Clear the flag; some pending data is present
-
 	SBRS flagStorage, spiTransferComplete	//If transfer still in process then wait
-	RJMP exitMOSIRoutineTrue
+	RJMP spiSendCycle
 
 	LDI YL, low(spiMOSI)	//Get an address of MOSI buffer
 	LDI YH, high(spiMOSI)
@@ -776,9 +1201,9 @@ RJMP exitMOSIRoutineTrue
 	BRLO exitMOSIRoutine
 		CLR R16				//Set to zero, if needed
 	exitMOSIRoutine:
-
-	STS spiMOSIRead, R16	//Store the read pointer
-
+	
+	RJMP spiSendCycle
+	
 exitMOSIRoutineTrue:
 
 //End of SPI data transmission algorithm
@@ -982,7 +1407,6 @@ storeToRAMBuffer:
 	CP YL, YH				//Compare the pointers
 	BREQ subrOverflow		//If not equal, then there's no overflow
 
-		//TX buffer overflow
 		LDI R16, 0x00			//Return 0's
 		STS subrSource, R16		//Store into the source argument's sell
 
@@ -996,7 +1420,9 @@ storeToRAMBuffer:
 RET
 
 	subrOverflow:
-	LDI R16, 0xFF			//Return 1's because there is no overflow
+	//buffer overflow
+	SET						//Sets T flag in SREG in case of overflow
+	LDI R16, 0xFF			//Return 1's
 	STS subrSource, R16		//Store into the source argument's sell
 	RJMP subrExit
 
