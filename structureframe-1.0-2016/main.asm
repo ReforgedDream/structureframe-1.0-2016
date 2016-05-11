@@ -531,8 +531,6 @@ UOUT UCSR1B, R16
 LDI R16, 0b_0000_0110
 UOUT UCSR1C, R16
 
-ORI flagStorage, (1<<spiTransferComplete)	//Initialize the flag that would be set only when SPI transfer is finished
-
 //------------------------------------
 
 //GPIO Initialization
@@ -605,6 +603,8 @@ STS nrfPlCnt, R16
 
 LDI R16, 4
 STS nrfRegDataCnt, R16
+
+ORI flagStorage, (1<<spiTransferComplete)	//Initialize the flag that would be set only when SPI transfer is finished
 
 CLR R16			//clear R16 for the order's sake
 
@@ -711,7 +711,7 @@ RJMP noNewDataUART				//bypass
 		ANDI R16, ~(1<<wAckPlCommArgument)
 		ORI R16, (1<<wAckPlCommand)
 		STS nrfCommRecogFlags, R16
-		RJMP noNewDataUART								//W_ACK_PAYLOAD command's argument (pipe no.) is receiver and added to command word
+		RJMP noNewDataUART								//W_ACK_PAYLOAD command's argument (pipe no.) is received and added to command word
 
 		invalidPipeNo:
 		LDS R16, nrfCommRecogFlags
@@ -1050,7 +1050,7 @@ stLab:	LDI YL, low(spiMOSI)
 		CPSE R16, R18				//Compare the pointers
 		RJMP setSk
 		SET
-setSk:	CPI ZL, low(nrfPayload+32)
+setSk:	CPI ZL, low(nrfPayload+32)		//probably an error source
 		LDI R18, high(nrfPayload+32)
 		CPC ZH, R18
 		BRLO stLab
@@ -1232,10 +1232,7 @@ RJMP notATimeToRefresh				//If the flag isn't set then skip
 	MOV YH, R16					//(a byte in hexadecimal form consists of two digits maximum)
 	ANDI YL, 0b_0000_1111		//Mask high...
 	ANDI YH, 0b_1111_0000		//...and low digit
-	LSR YH
-	LSR YH
-	LSR YH
-	LSR YH						//Shift high masked digit right 4 times
+	SWAP YH						//Move high tetrade to the beginning of the register
 	MOV digitToDisp1, YH
 	MOV digitToDisp2, YL		//Display both high and low digit separately on the LED
 
@@ -1247,10 +1244,7 @@ RJMP notATimeToRefresh				//If the flag isn't set then skip
 	MOV YH, R16
 	ANDI YL, 0b_0000_1111		//Mask high and low digits
 	ANDI YH, 0b_1111_0000
-	LSR YH
-	LSR YH
-	LSR YH
-	LSR YH						//Shift high masked digit right 4 times
+	SWAP YH						//Move high tetrade to the beginning of the register
 	MOV digitToDisp3, YH
 	MOV digitToDisp4, YL		//Display both high and low digit separately on the LED
 
@@ -1314,7 +1308,7 @@ RJMP notATimeToRefresh				//If the flag isn't set then skip
 	SBRC flagStorage, uartTXBufferOverflow
 	SET
 
-	//Note that the error state (T flag) won't be resetted
+	//Note that the error state (T flag) won't be reset
 
 	CPI R17, 0			//Is it the time to display 1st digit of LED?
 	BREQ firstDigTeleport
